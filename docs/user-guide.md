@@ -1,0 +1,197 @@
+# Death Counter user guide
+
+[Tiếng Việt](huong-dan-su-dung.md) · [Back to README](../README.md)
+
+The app's interface is in Vietnamese. This guide gives each label in Vietnamese with its meaning.
+
+## Contents
+
+1. [Install](#1-install)
+2. [Main window](#2-main-window)
+3. [Add a game](#3-add-a-game)
+4. [Nhận diện tab (detection)](#4-nhận-diện-tab-detection)
+5. [Hiển thị tab (display: overlay and OBS)](#5-hiển-thị-tab-display-overlay-and-obs)
+6. [Âm thanh tab (sound)](#6-âm-thanh-tab-sound)
+7. [Boss tab: top 3 bosses](#7-boss-tab-top-3-bosses)
+8. [Hotkeys](#8-hotkeys)
+9. [Where data is stored](#9-where-data-is-stored)
+10. [Troubleshooting](#10-troubleshooting)
+
+---
+
+## 1. Install
+
+1. Download `DeathCounter.exe` from [Releases](https://github.com/nguucode/death-counter/releases/latest).
+2. Put it anywhere, e.g. `C:\Program Files\DeathCounter\`. No admin rights needed.
+3. Run it. On first launch you may see:
+   - **SmartScreen** ("Windows protected your PC"): the exe is not code-signed. Click *More info → Run anyway*.
+   - **A network permission prompt**: the app serves a local page on `127.0.0.1` for OBS. It never goes to the internet. Allow it.
+
+Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, Windows blocks screen capture and the overlay is hidden.
+
+## 2. Main window
+
+- **Game**: the game you are playing. Each game has its own count, templates, keywords and boss stats.
+- **Số lần chết** (deaths): the big red number, with **+1**, **−1** and **Reset** buttons.
+- **4 tabs**: Nhận diện (detection), Hiển thị (display), Âm thanh (sound), Boss.
+- **Cửa sổ app luôn nằm trên**: keep the app window always on top.
+- The last line is the **status**: what the app just did, or any error.
+
+## 3. Add a game
+
+1. Click **+ Thêm** (add), type the game name, OK.
+2. If the name matches one of the 100 presets (close is fine: "elden ring", "wuchang"), its death keywords and boss-name region are loaded automatically.
+3. **Đổi tên** (rename) / **Xóa** (delete). Deleting a game also deletes its count and templates.
+
+## 4. Nhận diện tab (detection)
+
+### How deaths are detected
+
+The app captures the screen about twice per second and uses two methods together:
+
+1. **OCR**: looks for keywords like "YOU DIED", "WASTED", "DEAD". The text must be **large** and **near the center**; small menu text, item names and corner HUD are ignored.
+2. **Templates**: compares the screen with saved death-screen images. Used for stylized text or games with no text.
+
+Each death screen is counted **once**, however long it stays.
+
+### Settings
+
+| Label | Meaning |
+|---|---|
+| Bật tự nhận diện | Enable automatic detection. Turn off to count manually (F9/F10). |
+| Đọc chữ bằng OCR | Enable OCR. |
+| Trạng thái OCR | What OCR currently reads, e.g. `Thấy "DEAD" (cao 4.6%) → KHỚP` (found, matched). Check this first when a death is missed. |
+| Ngôn ngữ game | OCR language. "Theo Windows" (system default) is fine for English games. See [troubleshooting](#ocr-cannot-read-a-game-in-chinesejapanesevietnamese) for others. |
+| Mẫu theo game | Game preset. "Chung (mọi game)" = generic list. The gray line below says whether the preset is verified. |
+| Từ khóa | Keywords, comma separated. End with `*` to match the start of a sentence, e.g. `You were slain by *`. |
+| Độ giống | Live similarity between the screen and templates. |
+| Ngưỡng | Threshold. Lower it (70%) if deaths are missed, raise it (90%) if it miscounts. |
+| Cooldown | Seconds to wait after a count before another one. 8–10 s for fast-respawn games. |
+| Màn hình game | Which monitor runs the game. |
+| Vùng nhận diện | Region used for template matching. **Draw it tightly around the death text** for best accuracy. Set automatically on the first OCR hit. |
+| Ảnh mẫu | Saved templates (max 10). Delete wrong ones to avoid false counts. |
+
+### A game is not counted automatically
+
+1. Watch **Trạng thái OCR** while the death screen is visible.
+2. If OCR can't read it (stylized text, kanji, no text): press **F9** on the death screen. The app adds 1 and saves a template.
+3. Click **Khoanh vùng...** (draw region) and draw tightly around the death text or icon.
+4. Next deaths are counted automatically.
+
+## 5. Hiển thị tab (display: overlay and OBS)
+
+### Content
+
+**Định dạng** (format): `{count}` = deaths, `{game}` = game name. Example: `{game} · Deaths: {count}`.
+
+### Text style (shared by overlay and OBS)
+
+Font (any installed font, or type a name), size, bold, text color, outline (on/off, width) and outline color.
+
+### On-screen overlay
+
+1. Tick **Hiện overlay nổi trên game** (show overlay).
+2. Click **Chỉnh vị trí overlay** (move overlay): it shows a yellow frame; drag it anywhere.
+3. Click **Xong, lưu vị trí** (done). Normally the overlay is click-through.
+
+OBS only records this overlay with **Display Capture**. With Game Capture, use the Browser Source below.
+
+### OBS (Browser Source recommended)
+
+1. Click **Copy** next to Browser Source (`http://127.0.0.1:17321/`).
+2. In OBS: *Sources → + → Browser*, paste into **URL**, **Width 1200**, **Height 250**.
+3. Position it. Transparent background, your text style, updates live.
+
+Legacy option: tick **Ghi thêm file text** and use OBS *Text (GDI+) → Read from file*. This does not keep the style.
+
+## 6. Âm thanh tab (sound)
+
+No sound file is bundled.
+
+1. **Chọn file...**: pick your own `.mp3` or `.wav`.
+2. Tick **Phát âm thanh mỗi lần đếm +1** (play on every +1).
+3. **Âm lượng** (volume, mp3 only), **Nghe thử** (test).
+
+Plays on every +1 (automatic, F9 or button), not on −1. **Bỏ âm thanh** removes it.
+
+## 7. Boss tab: top 3 bosses
+
+### How the current boss is found
+
+- OCR reads the **top** and **bottom** bands of the screen, where most games print the boss name above its health bar.
+- A label must **stay on screen for several seconds** to count as a boss, so subtitles are ignored. A label visible continuously for over 15 minutes is treated as HUD.
+- When you die, the death goes to the boss seen in the last **30 seconds**. −1 removes it from that boss.
+
+### Settings
+
+| Label | Meaning |
+|---|---|
+| Ghi nhận boss khi chết | Track bosses for this game. |
+| Đang đánh | The boss currently detected. Empty during a fight? See troubleshooting. |
+| Vùng tên boss | "Tự động" (top + bottom bands), "Theo mẫu game" (preset, e.g. Sekiro: top-left) or your own region. |
+| Thống kê | Bosses and death counts. Fix OCR mistakes with **Đổi tên** (rename), **Gộp vào...** (merge two names of one boss), **Xóa** (delete). |
+| Bảng Top 3 | Speedrun-style panel: #1 in gold, current boss in blue. A current boss outside the top 3 gets its own extra row. |
+
+### Show the panel
+
+- **On screen**: tick **Hiện bảng nổi trên màn hình**, move it like the overlay.
+- **In OBS**: copy `http://127.0.0.1:17321/bosses` → OBS *Browser* source, Width 600, Height 300.
+
+## 8. Hotkeys
+
+| Key | Action |
+|---|---|
+| F9 | +1. If the current screen is not yet a template, save it as one. |
+| F10 | −1 (fix a wrong count). |
+| F11 | Save a template only, no count. |
+| F8 | Toggle automatic detection. |
+
+Hotkeys work while in game; the game won't receive these keys.
+To change them, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and restart the app.
+
+## 9. Where data is stored
+
+`C:\Users\<you>\AppData\Roaming\DeathCounter\` (button **Mở thư mục** in the Hiển thị tab):
+
+| File | Content |
+|---|---|
+| `config.json` | Global settings: hotkeys, text style, overlay positions... |
+| `profiles\<game>\profile.json` | Count, keywords, boss stats per game. |
+| `profiles\<game>\templates\` | Death-screen templates. |
+| `history.csv` | Log of every +1/−1, opens in Excel. |
+| `obs_deaths.txt` | Text file for OBS (if enabled). |
+
+Back up by copying the whole folder.
+
+## 10. Troubleshooting
+
+### A death is not counted
+- Check **Trạng thái OCR** during the death screen.
+  - Nothing or garbage read: stylized text. Use F9 + draw region (section 4).
+  - Correct text but "không phải từ khóa" (not a keyword): add it to **Từ khóa**.
+- Exclusive fullscreen: switch to Borderless.
+- Multiple monitors: check **Màn hình game**.
+
+### Wrong counts
+- Press F10.
+- Delete wrong templates, raise **Ngưỡng**, draw **Vùng nhận diện** tighter.
+
+### Hotkeys don't work
+The status line says "Cảnh báo phím tắt" (hotkey warning) when another program owns the key. Change it in `config.json`.
+
+### Overlay not visible in game
+The game is in exclusive fullscreen. Switch to Borderless.
+
+### OCR cannot read a game in Chinese/Japanese/Vietnamese
+1. Windows *Settings → Time & language → Language & region → Add a language*, add the game's language.
+2. Restart the app and pick it in **Ngôn ngữ game** (Nhận diện tab).
+3. Add that language's death text to **Từ khóa**.
+
+### Boss not detected
+- Watch **Đang đánh** during the fight.
+- Empty: the name may be outside the automatic bands or too small. Use **Khoanh vùng...** in the Boss tab.
+- Wrong name: draw a tighter region and rename it in **Thống kê**.
+
+### OBS shows nothing
+- The app must be running.
+- The port may differ from 17321 if it was busy; always copy the URL from the app.
