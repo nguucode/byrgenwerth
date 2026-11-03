@@ -186,27 +186,16 @@ func fakeMeasure(text string, px int, bold bool) (int, int) {
 func TestLayoutSplits(t *testing.T) {
 	p := &Profile{Bosses: []BossStat{{"Margit, the Fell Omen", 23}, {"Godrick the Grafted", 11}, {"Rennala", 7}, {"Starscourge Radahn", 4}}}
 	st := SplitsState{Title: "Elden Ring", Rows: BuildSplits(p, "Starscourge Radahn", 3), Total: 58}
-	W, H, fills, texts := LayoutSplits(st, 20, fakeMeasure)
-	if W < 240 || H < 150 {
-		t.Fatalf("too small: %dx%d", W, H)
+	W, H, rules, texts := LayoutSplits(st, 20, fakeMeasure)
+	if len(rules) != 2 {
+		t.Fatalf("want 2 rules (under the title and under Deaths), got %d", len(rules))
 	}
-	if fills[0].W != W || fills[0].H != H {
-		t.Fatal("border must cover the panel")
-	}
-	for _, f := range fills {
-		if f.X < 0 || f.Y < 0 || f.X+f.W > W || f.Y+f.H > H {
-			t.Fatalf("fill outside panel: %+v (%dx%d)", f, W, H)
+	for _, rc := range rules {
+		if rc.X < 0 || rc.Y < 0 || rc.X+rc.W > W || rc.Y+rc.H > H {
+			t.Fatalf("rule outside panel: %+v (%dx%d)", rc, W, H)
 		}
 	}
-	active := 0
-	for _, f := range fills {
-		if f.Top == pnActTop {
-			active++
-		}
-	}
-	if active != 1 {
-		t.Fatalf("exactly one active row, got %d", active)
-	}
+	want := map[string]bool{"Elden Ring": false, "Deaths": false, "58": false, "▶ Starscourge Radahn": false, "23": false}
 	for _, tx := range texts {
 		tw, th := fakeMeasure(tx.Text, tx.Px, tx.Bold)
 		x0 := tx.X
@@ -216,26 +205,30 @@ func TestLayoutSplits(t *testing.T) {
 		if tx.MaxW == 0 && (x0 < 0 || x0+tw > W) || tx.Y < 0 || tx.Y+th > H {
 			t.Fatalf("text outside panel: %+v", tx)
 		}
-		if tx.Text == "23" && tx.Color != pnGold {
-			t.Fatal("rank 1 count should be gold")
+		if _, ok := want[tx.Text]; ok {
+			want[tx.Text] = true
 		}
 	}
-	// Very long names are capped so the panel stays compact.
+	for k, seen := range want {
+		if !seen {
+			t.Errorf("missing %q", k)
+		}
+	}
+	// Very long names are cut to one line so the panel stays compact.
 	p.Bosses[0].Name = strings.Repeat("Very Long Boss Name ", 10)
-	W2, _, _, _ := LayoutSplits(SplitsState{Rows: BuildSplits(p, "", 3)}, 20, fakeMeasure)
-	if W2 > 20*16+200 {
+	W2, _, _, tx2 := LayoutSplits(SplitsState{Rows: BuildSplits(p, "", 3)}, 20, fakeMeasure)
+	if W2 > 20*20 {
 		t.Fatalf("panel too wide: %d", W2)
 	}
-	// Empty state renders a placeholder row.
-	_, _, _, tx := LayoutSplits(SplitsState{}, 18, fakeMeasure)
-	found := false
-	for _, x := range tx {
-		if x.Text == "Chưa có dữ liệu boss" {
-			found = true
+	for _, x := range tx2 {
+		if strings.HasPrefix(x.Text, "Very Long") && (x.MaxW <= 0 || x.MaxW >= W2) {
+			t.Fatalf("long name must be capped: %+v", x)
 		}
 	}
-	if !found {
-		t.Fatal("empty placeholder missing")
+	// No bosses yet: title, rule, Deaths only.
+	_, _, r3, tx3 := LayoutSplits(SplitsState{Total: 3}, 18, fakeMeasure)
+	if len(r3) != 1 || len(tx3) != 3 {
+		t.Fatalf("empty panel: %d rules, %d texts", len(r3), len(tx3))
 	}
 }
 

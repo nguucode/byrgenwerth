@@ -489,7 +489,7 @@ func (a *App) buildUI() error {
 					}},
 				),
 			),
-			hint("Kiểu bảng speedrun: hạng 1 vàng, boss đang đánh tô xanh."),
+			hint("Tên game, tổng số lần chết, rồi top 3 boss. Dùng màu và viền chữ ở tab Hiển thị; ▶ là boss đang đánh."),
 		},
 	}
 
@@ -1691,6 +1691,7 @@ func (a *App) onStyleChanged() {
 	a.saveConfig()
 	a.applyStyleToOverlay()
 	a.refreshCount()
+	a.refreshBosses() // the boss panel shares the text style
 }
 
 func (a *App) pickColor(outline bool) {
@@ -1711,6 +1712,7 @@ func (a *App) pickColor(outline bool) {
 	a.refreshSwatches()
 	a.applyStyleToOverlay()
 	a.refreshCount()
+	a.refreshBosses() // the boss panel shares the text style
 }
 
 func (a *App) refreshSwatches() {
@@ -2075,16 +2077,24 @@ func (a *App) refreshBosses() {
 	}
 	a.bossNowLbl.SetText(now)
 
+	ow := 0
+	if a.cfg.Outline {
+		ow = a.cfg.OutlineWidth
+	}
 	st := SplitsState{
 		Title: a.cur.Name, Rows: BuildSplits(a.cur, a.curBoss, 3), Total: a.cur.Deaths,
 		FontSize: a.cfg.BossPanelFontSize, Font: a.cfg.FontFamily,
+		Color: a.cfg.TextColor, Bold: a.cfg.FontBold, OutlineWidth: ow, OutlineColor: a.cfg.OutlineColor,
 	}
 	a.server.SetSplits(st)
-	if a.bossOverlay != nil {
-		a.bossOverlay.Splits = &st
-		a.bossOverlay.FontSize = a.cfg.BossPanelFontSize
-		a.bossOverlay.FontFamily = a.cfg.FontFamily
-		a.bossOverlay.Render()
+	if o := a.bossOverlay; o != nil {
+		o.Splits = &st
+		o.FontSize = a.cfg.BossPanelFontSize
+		o.FontFamily = a.cfg.FontFamily
+		o.Color = MustHex(a.cfg.TextColor, RGB{255, 255, 255})
+		o.OutlineColor = MustHex(a.cfg.OutlineColor, RGB{})
+		o.OutlineWidth = ow
+		o.Render()
 	}
 }
 

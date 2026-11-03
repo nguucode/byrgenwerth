@@ -184,7 +184,7 @@ Không hoàn tác được. Muốn giữ số đếm thì copy `DeathCounterData
 | Đang đánh | Tên boss app đang thấy. Đánh boss mà dòng này vẫn trống thì xem mục 10. |
 | Vùng tên boss | "Tự động" (dải trên + dưới), "Theo mẫu game" (ví dụ Sekiro: góc trên trái) hoặc vùng bạn tự khoanh. |
 | Thống kê | Danh sách boss và số lần chết. OCR đọc lệch thì dùng **Đổi tên**, **Gộp vào...** (gộp hai tên của cùng một boss), **Xóa**. |
-| Bảng Top 3 | Bảng kiểu speedrun: hạng 1 màu vàng, boss đang đánh tô xanh. Boss đang đánh ngoài top 3 thì hiện thêm một dòng riêng. |
+| Bảng Top 3 | Tên game, một đường kẻ, **Deaths** kèm tổng số lần chết, một đường kẻ, rồi top 3 boss kèm số lần chết. Chỉ có chữ và đường kẻ, theo màu và viền chữ ở tab Hiển thị. ▶ đánh dấu boss đang đánh; boss đó ngoài top 3 thì hiện thêm một dòng. Tên dài bị cắt còn một dòng với "…". |
 
 ### Hiện bảng Top 3
 

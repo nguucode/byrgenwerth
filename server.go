@@ -171,44 +171,41 @@ func (s *OverlayServer) handleBossPage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, bossPage)
 }
 
-// LiveSplit-like splits: dark rows, rank medal colors, right-aligned tabular
-// counts, the boss being fought highlighted in blue.
+// Boss panel: game name, a rule, Deaths with the total, a rule, then one line
+// per boss. Text and rules only, in the overlay text color and outline.
 const bossPage = `<!doctype html>
 <html><head><meta charset="utf-8"><title>Top bosses</title>
 <style>
 html,body{margin:0;background:transparent;overflow:hidden}
-#p{display:inline-block;min-width:22em;background:linear-gradient(#1b1b20,#0b0b0d);color:#fff;
-  font-family:var(--f),"Segoe UI",sans-serif;font-size:var(--s);border:1px solid #2b2b33}
-.h{display:flex;justify-content:space-between;padding:.35em .6em;font-size:.72em;letter-spacing:.08em;
-  text-transform:uppercase;color:#9a9aa6;background:linear-gradient(#26262d,#16161a);border-bottom:1px solid #2b2b33}
-.r{display:flex;align-items:center;gap:.55em;padding:.32em .6em;border-bottom:1px solid #1f1f25;
-  background:linear-gradient(#141418,#0e0e11)}
-.r.a{background:linear-gradient(#2f62d6,#1a3c94);border-bottom-color:#3a6fe6}
-.k{width:1.4em;text-align:right;font-weight:700;color:#8b8b96;font-variant-numeric:tabular-nums}
-.r1 .k{color:#ffd23f}.r2 .k{color:#d7d7e0}.r3 .k{color:#d9894a}
-.n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:18em}
-.c{font-weight:700;font-variant-numeric:tabular-nums;min-width:2.2em;text-align:right}
-.r1 .c{color:#ffd23f}.a .c{color:#fff}
-.sep{height:3px;background:#2b2b33}
-.f{display:flex;justify-content:space-between;padding:.4em .6em;font-size:.85em;color:#c8c8d0;background:#101013}
-.f b{color:#ff4d4d;font-variant-numeric:tabular-nums}
-.e{padding:.6em;color:#8b8b96;font-size:.85em}
+#p{display:inline-block;min-width:10em;padding:8px;line-height:1.25;
+  font-family:var(--f),"Segoe UI",sans-serif;font-size:var(--s)}
+.l{display:flex;justify-content:space-between;gap:1.5em;white-space:nowrap}
+.n{overflow:hidden;text-overflow:ellipsis;max-width:14em}
+.t{max-width:20em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c{font-variant-numeric:tabular-nums}
+.hr{height:max(2px,.1em);margin:.3em 0;background:currentColor}
 </style></head>
 <body><div id="p"></div>
 <script>
 var v=-1,p=document.getElementById('p');
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+// outline: a ring of text-shadows (box-shadow for the rules), like the native stroke
+function ring(w,c){var a=[];for(var i=0;i<16;i++){var t=i*Math.PI/8;a.push((Math.cos(t)*w).toFixed(1)+'px '+(Math.sin(t)*w).toFixed(1)+'px 0 '+c)}return a.join(',')}
 function draw(s){
   p.style.setProperty('--f','"'+(s.font||'Segoe UI').replace(/"/g,'')+'"');
   p.style.setProperty('--s',(s.size||18)+'px');
-  var h='<div class="h"><span>'+esc(s.title||'Top boss')+'</span><span>Deaths</span></div>';
-  if(!s.rows.length){h+='<div class="e">Chưa có dữ liệu boss</div>'}
-  s.rows.forEach(function(r,i){
-    if(r.rank===0||r.rank>3){if(i>0)h+='<div class="sep"></div>'}
-    var cls='r'+(r.rank>=1&&r.rank<=3?' r'+r.rank:'')+(r.active?' a':'');
-    h+='<div class="'+cls+'"><span class="k">'+(r.rank?r.rank:'▶')+'</span><span class="n">'+esc(r.name)+'</span><span class="c">'+r.deaths+'</span></div>';
+  p.style.color=s.color||'#fff';
+  p.style.fontWeight=s.bold?'700':'400';
+  var w=s.outlineWidth||0;
+  p.style.textShadow=w?ring(w,s.outlineColor):'none';
+  p.style.padding=(8+w)+'px';
+  var hr='<div class="hr" style="box-shadow:'+(w?'0 0 0 '+w+'px '+s.outlineColor:'none')+'"></div>';
+  var h='<div class="t">'+esc(s.title||'Death Counter')+'</div>'+hr;
+  h+='<div class="l"><span>Deaths</span><span class="c">'+s.total+'</span></div>';
+  if(s.rows.length)h+=hr;
+  s.rows.forEach(function(r){
+    h+='<div class="l"><span class="n">'+(r.active?'▶ ':'')+esc(r.name)+'</span><span class="c">'+r.deaths+'</span></div>';
   });
-  h+='<div class="f"><span>Tổng số lần chết</span><b>'+s.total+'</b></div>';
   p.innerHTML=h;
 }
 function tick(){fetch('/bosses/state',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){if(s.v!==v){v=s.v;draw(s)}}).catch(function(){}).then(function(){setTimeout(tick,400)})}

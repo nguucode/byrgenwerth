@@ -186,7 +186,7 @@ It cannot be undone. To keep your counts, copy `DeathCounterData` somewhere firs
 | Đang đánh | The boss currently detected. Empty during a fight? See troubleshooting. |
 | Vùng tên boss | "Tự động" (top + bottom bands), "Theo mẫu game" (preset, e.g. Sekiro: top-left) or your own region. |
 | Thống kê | Bosses and death counts. Fix OCR mistakes with **Đổi tên** (rename), **Gộp vào...** (merge two names of one boss), **Xóa** (delete). |
-| Bảng Top 3 | Speedrun-style panel: #1 in gold, current boss in blue. A current boss outside the top 3 gets its own extra row. |
+| Bảng Top 3 | Game name, a line, **Deaths** with the total, a line, then the top 3 bosses with their counts. Text and lines only, in the color and outline from the Hiển thị tab. ▶ marks the boss you are fighting; if it is outside the top 3 it gets an extra line. Long names are cut to one line with "…". |
 
 ### Show the panel
 

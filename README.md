@@ -14,7 +14,7 @@ shows the count as an on-screen overlay or in OBS, and tracks which bosses kill 
 - **Presets for 100 popular games**: 37 with verified death-screen text, the rest fall back to a generic keyword list. Not every game counts on its own: see the [list of supported games](docs/user-guide.md#supported-games) for what works out of the box, and [docs/death-screens-top100.csv](docs/death-screens-top100.csv) for the research and sources.
 - **Games without a death screen**: counts a death when the health bar empties and the screen fades to black. Works with HUD bars and with health shown on the character (Dead Space).
 - **Self-learning templates**: the first OCR hit saves a screenshot template, so stylized frames OCR misreads later are still caught. Games without death text can be taught with one hotkey press (F9).
-- **Top 3 bosses**, LiveSplit-style: the boss name above its health bar is read by OCR and each death is credited to the boss you were fighting.
+- **Top 3 bosses** panel in your text style: the boss name above its health bar is read by OCR and each death is credited to the boss you were fighting.
 - **Display anywhere**: click-through on-screen overlay, OBS Browser Source (keeps your text style, works with Game Capture), or a plain text file.
 - **Text style**: font, size, bold, color, outline width and color.
 - **Hotkeys**: F9 +1 and learn template · F10 −1 · F11 capture template · F8 toggle detection · F7 hide/show the app.
@@ -72,7 +72,7 @@ App Windows nhỏ gọn **tự đếm số lần chết** khi chơi game. App đ
 - **Mẫu cho 100 game phổ biến**: 37 game đã xác minh chữ màn chết, số còn lại dùng bộ từ khóa chung. Không phải game nào cũng tự đếm được: xem [danh sách game được hỗ trợ](docs/huong-dan-su-dung.md#game-được-hỗ-trợ) để biết game nào chạy sẵn. Dữ liệu và nguồn tra cứu ở [docs/death-screens-top100.csv](docs/death-screens-top100.csv).
 - **Game không có màn chết**: đếm khi thanh máu về 0 rồi màn hình tối đen. Dùng được cả thanh máu HUD lẫn máu hiện trên người nhân vật (Dead Space).
 - **Tự học ảnh mẫu**: lần đầu OCR bắt được, app lưu ảnh màn chết làm mẫu, sau này OCR đọc trượt thì ảnh mẫu bắt thay. Game không có chữ chết thì bấm F9 một lần để dạy.
-- **Top 3 boss** kiểu LiveSplit: đọc tên boss trên thanh máu, mỗi lần chết được tính cho boss đang đánh.
+- **Bảng top 3 boss** theo kiểu chữ của bạn: đọc tên boss trên thanh máu, mỗi lần chết được tính cho boss đang đánh.
 - **Hiển thị**: overlay nổi trên game (chuột bấm xuyên qua), OBS Browser Source (giữ nguyên kiểu chữ, dùng được với Game Capture), hoặc file text.
 - **Kiểu chữ**: font, cỡ chữ, đậm, màu chữ, viền và màu viền.
 - **Phím tắt**: F9 +1 và học mẫu · F10 −1 · F11 chụp mẫu · F8 bật/tắt nhận diện · F7 ẩn/hiện app.

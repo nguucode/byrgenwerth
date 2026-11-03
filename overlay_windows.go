@@ -269,7 +269,8 @@ func gdiFont(family string, px int, bold bool) win.HFONT {
 	return win.CreateFontIndirect(&lf)
 }
 
-// renderPanel draws the LiveSplit-style boss panel laid out by LayoutSplits.
+// renderPanel draws the boss panel laid out by LayoutSplits: text and rules in
+// the overlay text color, with the same outline, on a transparent background.
 func (o *Overlay) renderPanel() {
 	screenDC := win.GetDC(0)
 	defer win.ReleaseDC(0, screenDC)
@@ -310,10 +311,11 @@ func (o *Overlay) renderPanel() {
 		return int(sz.CX), int(sz.CY)
 	}
 
-	W, H, fills, texts := LayoutSplits(*o.Splits, o.FontSize, measure)
-	edge := 0
+	W, H, rules, texts := LayoutSplits(*o.Splits, o.FontSize, measure)
+	ow := max(o.OutlineWidth, 0)
+	edge := ow + 4
 	if o.editing {
-		edge = 3
+		edge += 8
 	}
 	w, h := int32(W+2*edge), int32(H+2*edge)
 
@@ -334,35 +336,16 @@ func (o *Overlay) renderPanel() {
 	defer win.SelectObject(memDC, oldBmp)
 	pix := unsafe.Slice((*byte)(bits), int(w*h*4))
 
-	// Background: opaque gradients (BGRA, premultiplied with alpha 255).
-	canvas := make([]byte, len(pix))
-	if o.editing {
-		for i := 0; i < int(w*h); i++ {
-			canvas[i*4], canvas[i*4+1], canvas[i*4+2], canvas[i*4+3] = 40, 200, 255, 255
-		}
+	// Cut long texts to one line and resolve right alignment once.
+	type placed struct {
+		x, y, px int
+		bold     bool
+		t16      []uint16
 	}
-	lerp := func(a, b uint8, t float64) byte { return byte(float64(a) + (float64(b)-float64(a))*t + 0.5) }
-	for _, f := range fills {
-		for y := 0; y < f.H; y++ {
-			t := 0.0
-			if f.H > 1 {
-				t = float64(y) / float64(f.H-1)
-			}
-			r, g, b := lerp(f.Top.R, f.Bottom.R, t), lerp(f.Top.G, f.Bottom.G, t), lerp(f.Top.B, f.Bottom.B, t)
-			yy := f.Y + y + edge
-			for x := 0; x < f.W; x++ {
-				i := (yy*int(w) + f.X + x + edge) * 4
-				canvas[i], canvas[i+1], canvas[i+2], canvas[i+3] = b, g, r, 255
-			}
-		}
-	}
-
-	// Text: draw white into the DIB, read coverage, blend the color onto canvas.
-	win.SetBkMode(memDC, win.TRANSPARENT)
-	win.SetTextColor(memDC, win.RGB(255, 255, 255))
+	var items []placed
 	for _, tx := range texts {
 		text := tx.Text
-		tw, th := measure(text, tx.Px, tx.Bold)
+		tw, _ := measure(text, tx.Px, tx.Bold)
 		if tx.MaxW > 0 && tw > tx.MaxW {
 			r := []rune(text)
 			for len(r) > 1 {
@@ -372,38 +355,55 @@ func (o *Overlay) renderPanel() {
 				}
 			}
 			text = string(r) + "…"
-			tw, th = measure(text, tx.Px, tx.Bold)
+			tw, _ = measure(text, tx.Px, tx.Bold)
 		}
 		x := tx.X
 		if tx.Right {
 			x -= tw
 		}
-		x += edge
-		y := tx.Y + edge
+		t16, _ := syscall.UTF16FromString(text)
+		items = append(items, placed{x + edge, tx.Y + edge, tx.Px, tx.Bold, t16})
+	}
+
+	win.SetBkMode(memDC, win.TRANSPARENT)
+	win.SetTextColor(memDC, win.RGB(255, 255, 255))
+	// mask stamps every text and rule at each offset and returns the coverage.
+	mask := func(offsets [][2]int) []uint8 {
 		for i := range pix {
 			pix[i] = 0
 		}
-		use(tx.Px, tx.Bold)
-		t16, _ := syscall.UTF16FromString(text)
-		win.TextOut(memDC, int32(x), int32(y), &t16[0], int32(len(t16)-1))
-		win.GdiFlush()
-		x0, y0 := max(x-2, 0), max(y-2, 0)
-		x1, y1 := min(x+tw+2, int(w)), min(y+th+2, int(h))
-		for yy := y0; yy < y1; yy++ {
-			for xx := x0; xx < x1; xx++ {
-				i := (yy*int(w) + xx) * 4
-				a := max(pix[i], pix[i+1], pix[i+2])
-				if a == 0 {
-					continue
+		for _, d := range offsets {
+			for _, it := range items {
+				if len(it.t16) > 1 {
+					use(it.px, it.bold)
+					win.TextOut(memDC, int32(it.x+d[0]), int32(it.y+d[1]), &it.t16[0], int32(len(it.t16)-1))
 				}
-				fa := float64(a) / 255
-				canvas[i] = byte(float64(tx.Color.B)*fa + float64(canvas[i])*(1-fa) + 0.5)
-				canvas[i+1] = byte(float64(tx.Color.G)*fa + float64(canvas[i+1])*(1-fa) + 0.5)
-				canvas[i+2] = byte(float64(tx.Color.R)*fa + float64(canvas[i+2])*(1-fa) + 0.5)
 			}
 		}
+		win.GdiFlush()
+		m := make([]uint8, w*h)
+		for i := range m {
+			m[i] = max(pix[i*4], pix[i*4+1], pix[i*4+2])
+		}
+		grow := 0
+		if len(offsets) > 1 {
+			grow = ow
+		}
+		for _, rc := range rules {
+			for y := max(rc.Y+edge-grow, 0); y < min(rc.Y+edge+rc.H+grow, int(h)); y++ {
+				for x := max(rc.X+edge-grow, 0); x < min(rc.X+edge+rc.W+grow, int(w)); x++ {
+					m[y*int(w)+x] = 255
+				}
+			}
+		}
+		return m
 	}
-	copy(pix, canvas)
+	fill := mask([][2]int{{0, 0}})
+	out := make([]uint8, len(fill))
+	if ow > 0 {
+		out = mask(OutlineOffsets(ow))
+	}
+	copy(pix, ComposeOverlay(fill, out, int(w), int(h), o.Color, o.OutlineColor, o.editing))
 
 	dst := win.POINT{X: o.X, Y: o.Y}
 	size := win.SIZE{CX: w, CY: h}

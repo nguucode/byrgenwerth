@@ -245,7 +245,12 @@ type SplitsState struct {
 	Total    int        `json:"total"`
 	FontSize int        `json:"size"`
 	Font     string     `json:"font"`
-	Version  int64      `json:"v"`
+	// Text style shared with the death counter overlay.
+	Color        string `json:"color"`
+	Bold         bool   `json:"bold"`
+	OutlineWidth int    `json:"outlineWidth"` // 0 = no outline
+	OutlineColor string `json:"outlineColor"`
+	Version      int64  `json:"v"`
 }
 
 // BuildSplits makes the top-n rows; if the boss being fought is outside the
@@ -276,139 +281,76 @@ func BuildSplits(p *Profile, current string, n int) []SplitRow {
 
 // ---------- native panel layout (rendered by the Windows overlay) ----------
 
-type PanelFill struct {
-	X, Y, W, H  int
-	Top, Bottom RGB // vertical gradient
-}
+// PanelRect is a rule line, drawn in the text color.
+type PanelRect struct{ X, Y, W, H int }
 
 type PanelText struct {
 	X, Y  int
-	MaxW  int // 0 = no limit; renderer truncates with "…"
+	MaxW  int // 0 = no limit; renderer truncates to one line with "…"
 	Text  string
 	Px    int
 	Bold  bool
-	Color RGB
 	Right bool // X is the right edge
 }
 
-var (
-	pnBorder   = RGB{0x2b, 0x2b, 0x33}
-	pnHeadTop  = RGB{0x26, 0x26, 0x2d}
-	pnHeadBot  = RGB{0x16, 0x16, 0x1a}
-	pnRowTop   = RGB{0x14, 0x14, 0x18}
-	pnRowBot   = RGB{0x0e, 0x0e, 0x11}
-	pnActTop   = RGB{0x2f, 0x62, 0xd6}
-	pnActBot   = RGB{0x1a, 0x3c, 0x94}
-	pnLine     = RGB{0x1f, 0x1f, 0x25}
-	pnFoot     = RGB{0x10, 0x10, 0x13}
-	pnGray     = RGB{0x9a, 0x9a, 0xa6}
-	pnRankGray = RGB{0x8b, 0x8b, 0x96}
-	pnGold     = RGB{0xff, 0xd2, 0x3f}
-	pnSilver   = RGB{0xd7, 0xd7, 0xe0}
-	pnBronze   = RGB{0xd9, 0x89, 0x4a}
-	pnWhite    = RGB{0xff, 0xff, 0xff}
-	pnFootTxt  = RGB{0xc8, 0xc8, 0xd0}
-	pnRed      = RGB{0xff, 0x4d, 0x4d}
-)
-
-// LayoutSplits computes the LiveSplit-style panel; measure returns text size in px.
-func LayoutSplits(st SplitsState, fs int, measure func(text string, px int, bold bool) (int, int)) (int, int, []PanelFill, []PanelText) {
+// LayoutSplits lays out the boss panel as plain text and rules: game name, a
+// rule, "Deaths" with the total, a rule, then one line per boss with its count.
+// measure returns text size in px.
+func LayoutSplits(st SplitsState, fs int, measure func(text string, px int, bold bool) (int, int)) (int, int, []PanelRect, []PanelText) {
 	if fs < 10 {
 		fs = 10
 	}
 	r := func(f float64) int { return int(math.Round(f)) }
-	pad, gap := r(0.6*float64(fs)), r(0.55*float64(fs))
-	hPx, fPx := r(0.72*float64(fs)), r(0.85*float64(fs))
-	_, lineH := measure("Ag", fs, false)
-	_, hLineH := measure("Ag", hPx, false)
-	_, fLineH := measure("Ag", fPx, false)
-	headerH := hLineH + r(0.7*float64(fs))
-	rowH := lineH + r(0.64*float64(fs))
-	footerH := fLineH + r(0.8*float64(fs))
+	gap, space := r(1.5*float64(fs)), r(0.3*float64(fs))
+	rule := max(2, r(0.1*float64(fs)))
+	_, lineH := measure("Ag", fs, st.Bold)
 
-	title := strings.ToUpper(st.Title)
+	title := st.Title
 	if title == "" {
-		title = "TOP BOSS"
+		title = "Death Counter"
 	}
-	rankW, countW, nameW := 0, 0, 0
+	name := func(row SplitRow) string {
+		if row.Active {
+			return "▶ " + row.Name // the boss being fought
+		}
+		return row.Name
+	}
+	tw, _ := measure(title, fs, st.Bold)
+	dw, _ := measure("Deaths", fs, st.Bold)
+	cw, _ := measure(fmt.Sprint(st.Total), fs, st.Bold)
+	nameW := 0
 	for _, row := range st.Rows {
-		rk := "▶"
-		if row.Rank > 0 {
-			rk = fmt.Sprint(row.Rank)
-		}
-		w, _ := measure(rk, fs, true)
-		rankW = max(rankW, w)
-		w, _ = measure(fmt.Sprint(row.Deaths), fs, true)
-		countW = max(countW, w)
-		w, _ = measure(row.Name, fs, false)
+		w, _ := measure(name(row), fs, st.Bold)
 		nameW = max(nameW, w)
+		w, _ = measure(fmt.Sprint(row.Deaths), fs, st.Bold)
+		cw = max(cw, w)
 	}
-	w8, _ := measure("88", fs, true)
-	countW = max(countW, w8)
-	nameW = min(nameW, fs*16)
-	tw, _ := measure(title, hPx, false)
-	dw, _ := measure("DEATHS", hPx, false)
-	W := max(pad+rankW+gap+nameW+gap+countW+pad, pad+tw+gap*2+dw+pad, fs*12)
-	ftw, _ := measure(fmt.Sprint(st.Total), fPx, true)
-	flw, _ := measure("Tổng số lần chết", fPx, false)
-	W = max(W, pad+flw+gap*2+ftw+pad)
+	nameW = min(nameW, fs*14) // long names are cut to one line
+	W := max(min(tw, fs*20), dw+gap+cw, nameW+gap+cw, fs*10)
 
-	var fills []PanelFill
+	var rules []PanelRect
 	var texts []PanelText
-	y := 1
-	inner := W - 2
-	fills = append(fills, PanelFill{0, 0, W, 0, pnBorder, pnBorder}) // height set below
-	fills = append(fills, PanelFill{1, y, inner, headerH, pnHeadTop, pnHeadBot})
-	texts = append(texts, PanelText{X: pad, Y: y + (headerH-hLineH)/2, Text: title, Px: hPx, Color: pnGray, MaxW: inner - pad*2 - dw - gap})
-	texts = append(texts, PanelText{X: W - pad, Y: y + (headerH-hLineH)/2, Text: "DEATHS", Px: hPx, Color: pnGray, Right: true})
-	y += headerH + 1
-	if len(st.Rows) == 0 {
-		fills = append(fills, PanelFill{1, y, inner, rowH, pnRowTop, pnRowBot})
-		texts = append(texts, PanelText{X: pad, Y: y + (rowH-lineH)/2, Text: "Chưa có dữ liệu boss", Px: fPx, Color: pnRankGray})
-		y += rowH + 1
-	}
-	for i, row := range st.Rows {
-		if (row.Rank == 0 || row.Rank > 3) && i > 0 {
-			y += 2 // separator before the extra "current boss" row
-		}
-		top, bot := pnRowTop, pnRowBot
-		if row.Active {
-			top, bot = pnActTop, pnActBot
-		}
-		fills = append(fills, PanelFill{1, y, inner, rowH, top, bot})
-		rankC, countC := pnRankGray, pnWhite
-		switch row.Rank {
-		case 1:
-			rankC, countC = pnGold, pnGold
-		case 2:
-			rankC = pnSilver
-		case 3:
-			rankC = pnBronze
-		}
-		if row.Active {
-			countC = pnWhite
-		}
-		rk := "▶"
-		if row.Rank > 0 {
-			rk = fmt.Sprint(row.Rank)
-		}
-		ty := y + (rowH-lineH)/2
-		texts = append(texts,
-			PanelText{X: pad + rankW, Y: ty, Text: rk, Px: fs, Bold: true, Color: rankC, Right: true},
-			PanelText{X: pad + rankW + gap, Y: ty, Text: row.Name, Px: fs, Color: pnWhite, MaxW: nameW},
-			PanelText{X: W - pad, Y: ty, Text: fmt.Sprint(row.Deaths), Px: fs, Bold: true, Color: countC, Right: true},
-		)
-		y += rowH
-		fills = append(fills, PanelFill{1, y, inner, 1, pnLine, pnLine})
-		y++
-	}
-	fills = append(fills, PanelFill{1, y, inner, footerH, pnFoot, pnFoot})
-	fy := y + (footerH-fLineH)/2
+	y := 0
+	texts = append(texts, PanelText{X: 0, Y: y, Text: title, Px: fs, Bold: st.Bold, MaxW: W})
+	y += lineH + space
+	rules = append(rules, PanelRect{0, y, W, rule})
+	y += rule + space
 	texts = append(texts,
-		PanelText{X: pad, Y: fy, Text: "Tổng số lần chết", Px: fPx, Color: pnFootTxt},
-		PanelText{X: W - pad, Y: fy, Text: fmt.Sprint(st.Total), Px: fPx, Bold: true, Color: pnRed, Right: true},
+		PanelText{X: 0, Y: y, Text: "Deaths", Px: fs, Bold: st.Bold},
+		PanelText{X: W, Y: y, Text: fmt.Sprint(st.Total), Px: fs, Bold: st.Bold, Right: true},
 	)
-	y += footerH + 1
-	fills[0].H = y
-	return W, y, fills, texts
+	y += lineH
+	if len(st.Rows) > 0 {
+		y += space
+		rules = append(rules, PanelRect{0, y, W, rule})
+		y += rule + space
+	}
+	for _, row := range st.Rows {
+		texts = append(texts,
+			PanelText{X: 0, Y: y, Text: name(row), Px: fs, Bold: st.Bold, MaxW: W - gap - cw},
+			PanelText{X: W, Y: y, Text: fmt.Sprint(row.Deaths), Px: fs, Bold: st.Bold, Right: true},
+		)
+		y += lineH
+	}
+	return W, y, rules, texts
 }
