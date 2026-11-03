@@ -224,6 +224,7 @@ type Hotkeys struct {
 	Sub     string `json:"sub"`
 	Capture string `json:"capture"`
 	Toggle  string `json:"toggle"`
+	Window  string `json:"window"`
 }
 
 type Config struct {
@@ -280,7 +281,7 @@ func DefaultConfig() Config {
 		IntervalMs:  400,
 		Sound:       true,
 		ObsFormat:   "Deaths: {count}",
-		Hotkeys:     Hotkeys{Add: "F9", Sub: "F10", Capture: "F11", Toggle: "F8"},
+		Hotkeys:     Hotkeys{Add: "F9", Sub: "F10", Capture: "F11", Toggle: "F8", Window: "F7"},
 
 		ObsEnabled:      true,
 		OverlayFontSize: 40,
@@ -420,6 +421,9 @@ func (s *Store) LoadConfig() Config {
 	}
 	if c.Hotkeys.Toggle == "" {
 		c.Hotkeys.Toggle = d.Hotkeys.Toggle
+	}
+	if c.Hotkeys.Window == "" {
+		c.Hotkeys.Window = d.Hotkeys.Window
 	}
 	return c
 }
@@ -1082,33 +1086,36 @@ func CopyDataDir(src, dst string) error {
 	})
 }
 
-// ResolveDataDir returns the folder to use: the user's choice if it is reachable,
-// otherwise defaultDir plus a warning explaining why.
-func ResolveDataDir(defaultDir string) (dir, warn string) {
-	b, err := os.ReadFile(filepath.Join(defaultDir, dataPointerFile))
-	custom := strings.TrimSpace(string(b))
-	if err != nil || custom == "" || filepath.Clean(custom) == filepath.Clean(defaultDir) {
-		return defaultDir, ""
+// LegacyDataDirs lists where versions before 0.9 kept data, newest first: the
+// custom folder %APPDATA%\\DeathCounter\\datadir.txt pointed to, then appData itself.
+func LegacyDataDirs(appData string) []string {
+	var dirs []string
+	if b, err := os.ReadFile(filepath.Join(appData, dataPointerFile)); err == nil {
+		if custom := strings.TrimSpace(string(b)); custom != "" && filepath.Clean(custom) != filepath.Clean(appData) {
+			dirs = append(dirs, filepath.Clean(custom))
+		}
 	}
-	if err := CheckWritable(custom); err != nil {
-		return defaultDir, "Không truy cập được thư mục dữ liệu " + custom + " (" + err.Error() + "). Đang tạm dùng thư mục mặc định."
-	}
-	return custom, ""
+	return append(dirs, appData)
 }
 
-// SetDataDir records newDir as the data folder; "" or defaultDir means default.
-func SetDataDir(defaultDir, newDir string) error {
-	if err := os.MkdirAll(defaultDir, 0o755); err != nil {
-		return err
-	}
-	ptr := filepath.Join(defaultDir, dataPointerFile)
-	if newDir == "" || filepath.Clean(newDir) == filepath.Clean(defaultDir) {
-		if err := os.Remove(ptr); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
+// appDataFiles are the entries Death Counter writes into a data folder.
+var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", dataPointerFile}
+
+// RemoveAppData deletes Death Counter's own files from dir and then dir itself if
+// it is left empty, so a folder shared with other files keeps them.
+func RemoveAppData(dir string) error {
+	var firstErr error
+	for _, name := range appDataFiles {
+		if err := os.RemoveAll(filepath.Join(dir, name)); err != nil && firstErr == nil {
+			firstErr = err
 		}
-		return nil
 	}
-	return writeAtomic(ptr, []byte(filepath.Clean(newDir)))
+	tmps, _ := filepath.Glob(filepath.Join(dir, "*.tmp"))
+	for _, t := range tmps {
+		os.Remove(t)
+	}
+	os.Remove(dir) // fails harmlessly when other files remain
+	return firstErr
 }
 
 // ---------- colors ----------

@@ -19,11 +19,18 @@
 
 ## 1. Cài đặt
 
-1. Tải `DeathCounter.exe` từ trang [Releases](https://github.com/nguucode/death-counter/releases/latest).
-2. Đặt file ở đâu cũng được, ví dụ `C:\Program Files\DeathCounter\`. App không cần quyền Admin.
-3. Chạy file. Lần đầu có thể gặp:
-   - **SmartScreen** ("Windows protected your PC"): exe chưa ký số. Bấm *More info → Run anyway*.
-   - **Hỏi quyền mạng**: app mở một trang web nội bộ ở `127.0.0.1` để OBS đọc. Trang này chỉ chạy trong máy, không ra internet. Chọn cho phép.
+Mở **PowerShell** (Start menu → gõ "PowerShell") rồi chạy:
+
+```powershell
+irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+```
+
+- **Lần đầu** script hỏi thư mục cài; bấm Enter để dùng `%LOCALAPPDATA%\Programs\DeathCounter`. Thư mục bạn gõ không tên là `DeathCounter` thì script tạo thư mục `DeathCounter` bên trong. App và toàn bộ dữ liệu nằm trong thư mục này.
+- Script thêm **Death Counter** vào Start menu và vào *Apps & features* của Windows, rồi mở app.
+- **Cập nhật**: chạy lại đúng lệnh đó. Script đóng app, thay file exe trong cùng thư mục, giữ nguyên dữ liệu.
+- Lần đầu mở app, Windows có thể **hỏi quyền mạng**: app mở một trang web nội bộ ở `127.0.0.1` để OBS đọc. Trang này chỉ chạy trong máy, không ra internet. Chọn cho phép.
+
+Cài tay: tải `DeathCounter.exe` ở trang [Releases](https://github.com/nguucode/death-counter/releases/latest) vào thư mục bạn có quyền ghi (không phải `C:\Program Files`). SmartScreen có thể cảnh báo vì exe chưa ký số: *More info → Run anyway*. Khi đó cập nhật cũng phải làm tay.
 
 Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclusive Fullscreen, Windows không cho app chụp màn hình game và overlay bị che.
 
@@ -146,14 +153,20 @@ App **không kèm sẵn âm thanh**.
 
 ### Dữ liệu
 
-Mặc định dữ liệu nằm ở `%APPDATA%\DeathCounter`. Muốn để chỗ khác (ổ D, thư mục OneDrive để đồng bộ giữa hai máy...):
+Dữ liệu nằm trong thư mục `DeathCounterData` cạnh file `DeathCounter.exe`, nên thư mục app chứa tất cả. Nút **Mở** mở thư mục đó trong Explorer.
 
-1. Bấm **Đổi...**, chọn thư mục.
-2. Thư mục trống: app hỏi rồi **chép** dữ liệu hiện tại sang. Thư mục đã có dữ liệu Death Counter: app hỏi rồi **dùng luôn** dữ liệu đó.
-3. App tự mở lại với thư mục mới. Dữ liệu ở chỗ cũ vẫn giữ nguyên, bạn tự xóa khi không cần.
+- Lên từ bản 0.8 trở về trước (dữ liệu ở `%APPDATA%\DeathCounter` hoặc thư mục bạn tự chọn): lần mở đầu tiên app tự chép sang một lần. Bản cũ giữ nguyên cho tới khi gỡ app.
+- Thư mục app không ghi được thì dữ liệu tạm lưu ở `%APPDATA%\DeathCounter` và app báo cho bạn. Hãy cài lại vào thư mục bạn có quyền ghi.
 
-**Mặc định** đưa về `%APPDATA%\DeathCounter`. Không chọn được thư mục hệ thống như `C:\Program Files` (cần quyền Admin).
-Nếu thư mục đã chọn không còn truy cập được (rút USB, đổi ổ), app tạm dùng thư mục mặc định và báo cho bạn.
+### Gỡ cài đặt
+
+Bấm **Gỡ Death Counter...** trong tab này, hoặc vào *Settings → Apps → Death Counter → Uninstall* của Windows. Sau khi bạn xác nhận, app xóa:
+
+- toàn bộ dữ liệu: `DeathCounterData`, cùng `%APPDATA%\DeathCounter` và thư mục bạn chọn ở bản cũ (chỉ xóa file của Death Counter trong đó, không đụng file khác),
+- file `DeathCounter.exe`, và thư mục cài nếu không còn gì,
+- shortcut trong Start menu và mục trong *Apps & features*.
+
+Không hoàn tác được. Muốn giữ số đếm thì copy `DeathCounterData` ra chỗ khác trước.
 
 ## 7. Tab Boss: Top 3 boss
 
@@ -186,13 +199,14 @@ Nếu thư mục đã chọn không còn truy cập được (rút USB, đổi �
 | F10 | −1 (sửa khi đếm nhầm). |
 | F11 | Chỉ chụp ảnh mẫu, không đếm. |
 | F8 | Bật/tắt tự nhận diện. |
+| F7 | Ẩn/hiện cửa sổ app. Nhận diện, overlay và OBS vẫn chạy. |
 
 Phím tắt hoạt động cả khi đang ở trong game. Game sẽ không nhận được các phím này.
 Đổi phím: mở `config.json` trong thư mục dữ liệu, sửa mục `hotkeys` (ví dụ `"add": "Ctrl+F9"`), rồi mở lại app.
 
 ## 9. Dữ liệu được lưu ở đâu
 
-Mặc định `C:\Users\<tên>\AppData\Roaming\DeathCounter\`, hoặc thư mục bạn chọn ở tab Cài đặt (nút **Mở thư mục dữ liệu**):
+Trong thư mục `DeathCounterData` cạnh file `DeathCounter.exe` (nút **Mở** ở tab Cài đặt):
 
 | File | Nội dung |
 |---|---|
@@ -202,7 +216,7 @@ Mặc định `C:\Users\<tên>\AppData\Roaming\DeathCounter\`, hoặc thư mục
 | `history.csv` | Nhật ký từng lần +1/−1, mở bằng Excel được. |
 | `obs_deaths.txt` | File text cho OBS (nếu bật). |
 
-Sao lưu: copy cả thư mục này. Đổi chỗ lưu: xem [mục 6](#dữ-liệu).
+Sao lưu: copy cả thư mục này.
 
 ## 10. Xử lý sự cố
 

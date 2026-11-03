@@ -21,11 +21,18 @@ The app's interface is in Vietnamese. This guide gives each label in Vietnamese 
 
 ## 1. Install
 
-1. Download `DeathCounter.exe` from [Releases](https://github.com/nguucode/death-counter/releases/latest).
-2. Put it anywhere, e.g. `C:\Program Files\DeathCounter\`. No admin rights needed.
-3. Run it. On first launch you may see:
-   - **SmartScreen** ("Windows protected your PC"): the exe is not code-signed. Click *More info → Run anyway*.
-   - **A network permission prompt**: the app serves a local page on `127.0.0.1` for OBS. It never goes to the internet. Allow it.
+Open **PowerShell** (Start menu → type "PowerShell") and run:
+
+```powershell
+irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+```
+
+- **First time** it asks for an install folder; press Enter for `%LOCALAPPDATA%\Programs\DeathCounter`. If the folder you type is not named `DeathCounter`, a `DeathCounter` folder is created inside it. The app and all its data live there.
+- It adds **Death Counter** to the Start menu and to Windows *Apps & features*, then starts the app.
+- **Update**: run the same command again. It closes the app, replaces the exe in the same folder and keeps your data.
+- On first launch Windows may ask for **network permission**: the app serves a local page on `127.0.0.1` for OBS. It never goes to the internet. Allow it.
+
+Manual install: download `DeathCounter.exe` from [Releases](https://github.com/nguucode/death-counter/releases/latest) into a folder you can write to (not `C:\Program Files`). SmartScreen may warn because the exe is not code-signed: *More info → Run anyway*. Updates are then manual too.
 
 Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, Windows blocks screen capture and the overlay is hidden.
 
@@ -148,14 +155,20 @@ Plays on every +1 (automatic, F9 or button), not on −1. **Bỏ âm thanh** rem
 
 ### Data folder
 
-Data lives in `%APPDATA%\DeathCounter` by default. To keep it elsewhere (drive D:, a OneDrive folder to sync two PCs...):
+Data lives in `DeathCounterData` next to `DeathCounter.exe`, so the app folder holds everything. **Mở** (open) shows it in Explorer.
 
-1. Click **Đổi...** (change) and pick a folder.
-2. Empty folder: the app asks, then **copies** your current data there. Folder that already has Death Counter data: the app asks, then **uses** that data.
-3. The app restarts with the new folder. The old copy is kept; delete it yourself when you no longer need it.
+- Coming from 0.8 or older, where data was in `%APPDATA%\DeathCounter` or a folder you picked: the first launch copies it over once. The old copy stays until you uninstall.
+- If the app folder is not writable, data goes to `%APPDATA%\DeathCounter` for now and the app tells you. Reinstall into a folder you own.
 
-**Mặc định** (default) goes back to `%APPDATA%\DeathCounter`. System folders like `C:\Program Files` can't be used (they need admin rights).
-If the chosen folder becomes unreachable (USB unplugged, drive letter changed), the app falls back to the default folder and tells you.
+### Uninstall
+
+Click **Gỡ Death Counter...** (uninstall) in this tab, or use Windows *Settings → Apps → Death Counter → Uninstall*. After you confirm, it deletes:
+
+- all data: `DeathCounterData`, plus `%APPDATA%\DeathCounter` and the folder you picked in older versions (only Death Counter's own files there, nothing else),
+- `DeathCounter.exe`, and the install folder when it is left empty,
+- the Start menu shortcut and the *Apps & features* entry.
+
+It cannot be undone. To keep your counts, copy `DeathCounterData` somewhere first.
 
 ## 7. Boss tab: top 3 bosses
 
@@ -188,13 +201,14 @@ If the chosen folder becomes unreachable (USB unplugged, drive letter changed), 
 | F10 | −1 (fix a wrong count). |
 | F11 | Save a template only, no count. |
 | F8 | Toggle automatic detection. |
+| F7 | Hide/show the app window. Detection, overlay and OBS keep running. |
 
 Hotkeys work while in game; the game won't receive these keys.
 To change them, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and restart the app.
 
 ## 9. Where data is stored
 
-By default `C:\Users\<you>\AppData\Roaming\DeathCounter\`, or the folder you chose in the Cài đặt tab (button **Mở thư mục dữ liệu**):
+In `DeathCounterData` next to `DeathCounter.exe` (button **Mở** in the Cài đặt tab):
 
 | File | Content |
 |---|---|
@@ -204,7 +218,7 @@ By default `C:\Users\<you>\AppData\Roaming\DeathCounter\`, or the folder you cho
 | `history.csv` | Log of every +1/−1, opens in Excel. |
 | `obs_deaths.txt` | Text file for OBS (if enabled). |
 
-Back up by copying the whole folder. To move it, see [section 6](#data-folder).
+Back up by copying the whole folder.
 
 ## 10. Troubleshooting
 

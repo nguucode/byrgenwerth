@@ -4,7 +4,7 @@ A small Windows app that counts how many times you die in a game, automatically.
 It reads the screen with the OCR built into Windows ("YOU DIED", "WASTED", "DEAD"...),
 shows the count as an on-screen overlay or in OBS, and tracks which bosses kill you the most.
 
-**[Tiếng Việt bên dưới](#tiếng-việt)** · **[Download](https://github.com/nguucode/death-counter/releases/latest)** · **[User guide](docs/user-guide.md)** · **[Hướng dẫn sử dụng](docs/huong-dan-su-dung.md)**
+**[Tiếng Việt bên dưới](#tiếng-việt)** · **[Install](#quick-start)** · **[User guide](docs/user-guide.md)** · **[Hướng dẫn sử dụng](docs/huong-dan-su-dung.md)**
 
 ![Top bosses panel](docs/images/boss-panel.png)
 
@@ -17,16 +17,18 @@ shows the count as an on-screen overlay or in OBS, and tracks which bosses kill 
 - **Top 3 bosses**, LiveSplit-style: the boss name above its health bar is read by OCR and each death is credited to the boss you were fighting.
 - **Display anywhere**: click-through on-screen overlay, OBS Browser Source (keeps your text style, works with Game Capture), or a plain text file.
 - **Text style**: font, size, bold, color, outline width and color.
-- **Hotkeys**: F9 +1 and learn template · F10 −1 · F11 capture template · F8 toggle detection.
+- **Hotkeys**: F9 +1 and learn template · F10 −1 · F11 capture template · F8 toggle detection · F7 hide/show the app.
 - **Optional sound** on every count (bring your own .mp3 / .wav).
-- One portable `.exe`, no installer, no internet needed. Data lives in `%APPDATA%\DeathCounter` or any folder you choose.
+- **One-line install and update** from PowerShell. The app and its data stay in one folder; **uninstall** from the app removes everything. No internet needed while playing.
 
 ![Text styles in OBS](docs/images/text-styles.png)
 
 ## Quick start
 
-1. Download `DeathCounter.exe` from [Releases](https://github.com/nguucode/death-counter/releases/latest) and run it.
-   Windows SmartScreen may warn because the exe is not signed: *More info → Run anyway*.
+1. Open PowerShell and run the command below. The first time it asks where to install; run it again to update.
+   ```powershell
+   irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+   ```
 2. Click **+ Thêm** (Add) and type your game's name. If it is one of the 100 presets, keywords are set automatically.
 3. Play. When the death screen appears, the counter goes up.
    If it doesn't (stylized or missing text), press **F9** once on the death screen; the app learns it.
@@ -73,13 +75,16 @@ App Windows nhỏ gọn **tự đếm số lần chết** khi chơi game. App đ
 - **Top 3 boss** kiểu LiveSplit: đọc tên boss trên thanh máu, mỗi lần chết được tính cho boss đang đánh.
 - **Hiển thị**: overlay nổi trên game (chuột bấm xuyên qua), OBS Browser Source (giữ nguyên kiểu chữ, dùng được với Game Capture), hoặc file text.
 - **Kiểu chữ**: font, cỡ chữ, đậm, màu chữ, viền và màu viền.
-- **Phím tắt**: F9 +1 và học mẫu · F10 −1 · F11 chụp mẫu · F8 bật/tắt nhận diện.
+- **Phím tắt**: F9 +1 và học mẫu · F10 −1 · F11 chụp mẫu · F8 bật/tắt nhận diện · F7 ẩn/hiện app.
 - **Âm thanh xác nhận** mỗi lần đếm (tự chọn file .mp3 / .wav).
-- Một file `.exe` duy nhất, không cần cài, không cần internet. Dữ liệu lưu ở `%APPDATA%\DeathCounter` hoặc thư mục bạn tự chọn.
+- **Cài và cập nhật bằng một lệnh** PowerShell. App và dữ liệu nằm chung một thư mục; **gỡ cài đặt** ngay trong app sẽ xóa sạch. Lúc chơi không cần internet.
 
 ### Bắt đầu nhanh
 
-1. Tải `DeathCounter.exe` ở mục [Releases](https://github.com/nguucode/death-counter/releases/latest) rồi chạy. Nếu SmartScreen cảnh báo (exe chưa ký số): *More info → Run anyway*.
+1. Mở PowerShell, chạy lệnh dưới. Lần đầu script hỏi thư mục cài; chạy lại để cập nhật.
+   ```powershell
+   irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+   ```
 2. Bấm **+ Thêm**, gõ tên game. Game nằm trong 100 mẫu thì app tự nạp từ khóa.
 3. Vào chơi. Màn chết hiện ra là số tự tăng. Nếu không tăng (chữ cách điệu hoặc không có chữ), bấm **F9** một lần ngay lúc màn chết đang hiện.
 4. Dùng OBS: tab **Hiển thị** → **Copy** URL Browser Source → trong OBS thêm nguồn *Browser*, Width 1200, Height 250.

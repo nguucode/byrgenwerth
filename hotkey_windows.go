@@ -16,6 +16,7 @@ const (
 	ActSub
 	ActCapture
 	ActToggle
+	ActWindow
 )
 
 // HotkeyManager owns a dedicated OS thread: RegisterHotKey with a NULL window
