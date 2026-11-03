@@ -131,7 +131,9 @@ type App struct {
 	// ocrProven: OCR has read this game's death text this session. From then on
 	// a template match alone does not count: templates of a dark death screen
 	// also match the dark respawn or a dimmed screenshot tool.
-	ocrProven  bool
+	ocrProven bool
+	// loggedAway: the "game not in front" line was written to ocr-debug.log.
+	loggedAway bool
 	boldCB     *walk.CheckBox
 	colorSw    *walk.Composite
 	colorLbl   *walk.Label
@@ -739,7 +741,14 @@ func (a *App) rememberOcr(lines []OcrLine, now time.Time) {
 	for _, ln := range lines {
 		texts = append(texts, DescribeLine(ln))
 	}
-	a.store.AppendDebugLog("OCR  "+strings.Join(texts, " | "), now)
+	// Only log frames of the game: a browser in front fills the log in minutes.
+	if inGame := isOtherFullscreen(win.GetForegroundWindow()); inGame {
+		a.store.AppendDebugLog("OCR  "+strings.Join(texts, " | "), now)
+		a.loggedAway = false
+	} else if !a.loggedAway {
+		a.store.AppendDebugLog("OCR  (game not in front: not logged until it is)", now)
+		a.loggedAway = true
+	}
 	a.recentOcr = append(a.recentOcr, OcrFrame{At: now, Lines: texts})
 	for len(a.recentOcr) > 0 && now.Sub(a.recentOcr[0].At) > 10*time.Second {
 		a.recentOcr = a.recentOcr[1:]

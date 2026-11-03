@@ -165,12 +165,13 @@ func (d *Detector) Feed(sim float64, now time.Time) bool {
 		d.consec = 0
 	}
 	if d.disarmed {
+		// Rearm once the death screen is gone; the cooldown only gates counting.
 		if sim < d.Threshold-d.RearmMargin {
 			d.below++
 		} else {
 			d.below = 0
 		}
-		if d.below >= 2 && now.Sub(d.lastCount) >= d.Cooldown {
+		if d.below >= 2 {
 			d.disarmed = false
 			d.below = 0
 		}
@@ -190,9 +191,19 @@ func (d *Detector) Feed(sim float64, now time.Time) bool {
 // FeedStrong is Feed for unambiguous evidence, such as a multi-word death
 // phrase read by OCR: one frame is enough.
 func (d *Detector) FeedStrong(now time.Time) bool {
-	d.consec = max(d.consec, d.ConsecNeeded-1)
-	return d.Feed(1, now)
+	// A new death screen can follow quickly (fall right after respawning): a
+	// phrase read after the screen cleared needs only strongCooldown, not Cooldown.
+	if d.disarmed || now.Sub(d.lastCount) < min(d.Cooldown, strongCooldown) {
+		d.Feed(1, now)
+		return false
+	}
+	d.disarmed, d.consec, d.below = true, 0, 0
+	d.lastCount, d.lastAuto = now, now
+	return true
 }
+
+// strongCooldown: a Dark Souls death screen shows ~3 s, respawn takes ~8 s.
+const strongCooldown = 8 * time.Second
 
 // StrongKeyword reports whether an OCR hit on kw is enough on its own: a phrase
 // ("YOU DIED") or CJK text, not a single word like "DEAD" that menus also use.
@@ -1048,46 +1059,55 @@ func MatchDeath(lines []OcrLine, keywords []string, minHeight float64) (OcrMatch
 			}
 			prefix := strings.HasSuffix(strings.TrimSpace(kw), "*")
 			kws := strings.Fields(matchText(strings.TrimSuffix(strings.TrimSpace(kw), "*")))
-			if len(kws) == 0 || len(kws) > len(words) {
-				continue
+			variants := [][]string{kws}
+			if !prefix && len(kws) >= 3 {
+				// OCR often drops a short middle word: "BAN CHET" for "BẠN ĐÃ CHẾT".
+				for k := 1; k < len(kws)-1; k++ {
+					variants = append(variants, append(append([]string{}, kws[:k]...), kws[k+1:]...))
+				}
 			}
-			if prefix {
-				// "YOU WERE SLAIN BY *": phrase must start the line; the variable tail
-				// (killer name etc.) may be up to 8 words.
-				if len(words) > len(kws)+8 {
+			for _, kws := range variants {
+				if len(kws) == 0 || len(kws) > len(words) {
 					continue
 				}
-			} else if len(words) > len(kws)+2 {
-				continue
-			}
-			for start := 0; start+len(kws) <= len(words); start++ {
-				if prefix && start > 0 {
-					break
+				if prefix {
+					// "YOU WERE SLAIN BY *": phrase must start the line; the variable tail
+					// (killer name etc.) may be up to 8 words.
+					if len(words) > len(kws)+8 {
+						continue
+					}
+				} else if len(words) > len(kws)+2 {
+					continue
 				}
-				ok := true
-				for k, kwWord := range kws {
-					if editDistance(words[start+k], kwWord) > wordTolerance(kwWord, len(kws)) {
-						ok = false
+				for start := 0; start+len(kws) <= len(words); start++ {
+					if prefix && start > 0 {
 						break
 					}
-				}
-				if !ok {
-					continue
-				}
-				x0, y0, x1, y1, h := 1.0, 1.0, 0.0, 0.0, 0.0
-				for k := range kws {
-					b := boxes[start+k]
-					x0, y0 = math.Min(x0, b.X), math.Min(y0, b.Y)
-					x1, y1 = math.Max(x1, b.X+b.W), math.Max(y1, b.Y+b.H)
-					h = math.Max(h, b.H)
-				}
-				cx, cy := (x0+x1)/2, (y0+y1)/2
-				if h < minHeight || cx < 0.2 || cx > 0.8 || cy < 0.12 || cy > 0.92 {
-					continue
-				}
-				if !found || h > best.Height {
-					best = OcrMatch{Keyword: kw, Line: ln.Text, Box: ROI{x0, y0, x1 - x0, y1 - y0}, Height: h}
-					found = true
+					ok := true
+					for k, kwWord := range kws {
+						if editDistance(words[start+k], kwWord) > wordTolerance(kwWord, len(kws)) {
+							ok = false
+							break
+						}
+					}
+					if !ok {
+						continue
+					}
+					x0, y0, x1, y1, h := 1.0, 1.0, 0.0, 0.0, 0.0
+					for k := range kws {
+						b := boxes[start+k]
+						x0, y0 = math.Min(x0, b.X), math.Min(y0, b.Y)
+						x1, y1 = math.Max(x1, b.X+b.W), math.Max(y1, b.Y+b.H)
+						h = math.Max(h, b.H)
+					}
+					cx, cy := (x0+x1)/2, (y0+y1)/2
+					if h < minHeight || cx < 0.2 || cx > 0.8 || cy < 0.12 || cy > 0.92 {
+						continue
+					}
+					if !found || h > best.Height {
+						best = OcrMatch{Keyword: kw, Line: ln.Text, Box: ROI{x0, y0, x1 - x0, y1 - y0}, Height: h}
+						found = true
+					}
 				}
 			}
 		}

@@ -223,6 +223,14 @@ func TestDetectorFirstDeathFromOCR(t *testing.T) {
 			t.Fatal("scattered frames above threshold must not count")
 		}
 	}
+	// Respawn and fall again 14 s later: the new death screen counts.
+	d4 := NewDetector(0.8, 15*time.Second)
+	d4.FeedStrong(t0)
+	d4.Feed(0, t0.Add(5*time.Second))
+	d4.Feed(0, t0.Add(6*time.Second))
+	if !d4.FeedStrong(t0.Add(14 * time.Second)) {
+		t.Fatal("a second death screen after the first cleared must count")
+	}
 	if !StrongKeyword("YOU DIED") || !StrongKeyword("殒命") || StrongKeyword("DEAD") || !StrongKeyword("KILLED BY *") {
 		t.Fatal("StrongKeyword")
 	}
@@ -481,6 +489,8 @@ func TestMatchDeathPositive(t *testing.T) {
 		line("BẠN ĐÃ CHẾT", 0.4, 0.45, 0.06), // Vietnamese fan translation, Vietnamese OCR
 		line("BAN DA CHET", 0.4, 0.45, 0.06), // same screen, English OCR drops the marks
 		line("BẠN ĐA CHÊT", 0.4, 0.45, 0.06), // marks half-read
+		line("BAN CHET", 0.4, 0.45, 0.06),    // OCR dropped "ĐÃ" (real Dark Souls log)
+		line("BAN CHÉT", 0.4, 0.45, 0.06),
 	}
 	for _, c := range cases {
 		if m, ok := MatchDeath([]OcrLine{c}, kw, 0.025); !ok {
