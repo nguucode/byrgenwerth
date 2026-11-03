@@ -1,9 +1,15 @@
 name: release
 
-# Push a tag like v0.8.0 to build DeathCounter.exe on Windows and publish a release.
+# Build DeathCounter.exe on Windows and publish a release, either by pushing a
+# tag like v0.8.0 or from the Actions tab ("Run workflow", enter the version).
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to create, e.g. v0.8.0"
+        required: true
 
 permissions:
   contents: write
@@ -22,10 +28,11 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version || github.ref_name }}
         run: |
-          notes="docs/release-notes/${GITHUB_REF_NAME}.md"
+          notes="docs/release-notes/${VERSION}.md"
           if [ -f "$notes" ]; then
-            gh release create "$GITHUB_REF_NAME" DeathCounter.exe --title "Death Counter $GITHUB_REF_NAME" --notes-file "$notes"
+            gh release create "$VERSION" DeathCounter.exe --target "$GITHUB_SHA" --title "Death Counter $VERSION" --notes-file "$notes"
           else
-            gh release create "$GITHUB_REF_NAME" DeathCounter.exe --title "Death Counter $GITHUB_REF_NAME" --generate-notes
+            gh release create "$VERSION" DeathCounter.exe --target "$GITHUB_SHA" --title "Death Counter $VERSION" --generate-notes
           fi
