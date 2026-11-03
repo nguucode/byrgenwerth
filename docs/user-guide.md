@@ -71,6 +71,20 @@ Each death screen is counted **once**, however long it stays.
 | Vùng nhận diện | Region used for template matching. **Draw it tightly around the death text** for best accuracy. Set automatically on the first OCR hit. |
 | Ảnh mẫu | Saved templates (max 10). Delete wrong ones to avoid false counts. |
 
+### Games without a death screen (fade to black, reload checkpoint)
+
+Some games just fade to black and reload. Use the **Máu nhân vật** (character health) section:
+
+1. In game, at **full health**, click **Khoanh thanh máu...** (draw health bar). The app hides for half a second to capture the game screen.
+2. Draw the region:
+   - HUD health bar: draw tightly around it.
+   - Health shown on the character (e.g. Isaac's spine in Dead Space): draw a **wide** region around where the character usually stands.
+3. The app learns the bar's color. **Máu hiện tại** shows current health %.
+
+A death is counted when **health drops to ~0%, then within 8 seconds the screen goes almost fully black for at least 1 second**. Loading screens while you still have health are ignored.
+
+Limits: instant deaths where the bar has no time to drop (falling) may be missed: press F9. Walking into a black loading zone at very low health may count wrongly: press F10.
+
 ### A game is not counted automatically
 
 1. Watch **Trạng thái OCR** while the death screen is visible.

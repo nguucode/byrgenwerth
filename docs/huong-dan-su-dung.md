@@ -69,6 +69,20 @@ Mỗi màn chết chỉ được đếm **một lần**, dù nó hiện bao lâu
 | Vùng nhận diện | Vùng dùng để so ảnh mẫu. **Khoanh sát chữ chết** cho chính xác nhất. Lần đầu OCR bắt được, app tự khoanh. |
 | Ảnh mẫu | Danh sách ảnh màn chết đã lưu (tối đa 10). Xóa ảnh chụp sai để tránh đếm nhầm. |
 
+### Game không có màn chết (màn hình tối rồi về điểm lưu)
+
+Một số game khi chết chỉ tối màn hình rồi tải lại, không có chữ nào. Dùng mục **Máu nhân vật**:
+
+1. Vào game, lúc nhân vật **đang đầy máu**, bấm **Khoanh thanh máu...**. App tự ẩn đi nửa giây để chụp màn hình game.
+2. Khoanh vùng thanh máu:
+   - Thanh máu trên HUD: khoanh sát thanh máu.
+   - Máu nằm trên người nhân vật (ví dụ cột sống của Isaac trong Dead Space): khoanh **rộng** quanh chỗ nhân vật hay đứng.
+3. App tự học màu thanh máu. Dòng **Máu hiện tại** hiện % máu khi chơi.
+
+App đếm 1 lần chết khi **máu về ~0%, rồi trong vòng 8 giây màn hình đen gần như hoàn toàn ít nhất 1 giây**. Màn tải lúc còn máu không bị tính.
+
+Giới hạn: chết tức thì mà thanh máu không kịp tụt (rơi vực) có thể bị sót, khi đó bấm F9. Lúc máu rất thấp mà đi vào vùng tải màn đen thì có thể bị đếm nhầm, bấm F10 để trừ.
+
 ### Game không tự đếm thì làm gì
 
 1. Nhìn **Trạng thái OCR** khi màn chết đang hiện.

@@ -193,6 +193,19 @@ func (d *Detector) MarkManual(now time.Time) {
 	d.lastCount = now
 }
 
+// Trigger counts a death signalled by another detector (health bar), unless a
+// death was already counted within the cooldown.
+func (d *Detector) Trigger(now time.Time) bool {
+	if !d.lastCount.IsZero() && now.Sub(d.lastCount) < d.Cooldown {
+		return false
+	}
+	d.disarmed = true
+	d.consec, d.below = 0, 0
+	d.lastCount = now
+	d.lastAuto = now
+	return true
+}
+
 // AutoCountedRecently is true if an automatic count happened within the cooldown,
 // meaning a manual hotkey press right now is most likely the same death.
 func (d *Detector) AutoCountedRecently(now time.Time) bool {
@@ -303,6 +316,10 @@ type Profile struct {
 	BossTrack   bool       `json:"boss_track"`
 	BossROI     ROI        `json:"boss_roi"` // zero = automatic zones
 	Bosses      []BossStat `json:"bosses,omitempty"`
+	HPEnabled   bool       `json:"hp_enabled"`
+	HPZone      ROI        `json:"hp_zone"`
+	HPColor     HPColor    `json:"hp_color"`
+	HPFull      float64    `json:"hp_full"`
 	ROI         ROI        `json:"roi"`
 	Templates   []string   `json:"templates"` // file names inside templates/
 }

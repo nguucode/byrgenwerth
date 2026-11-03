@@ -27,6 +27,9 @@ var iconPNG []byte
 
 type loopState struct {
 	enabled      bool
+	hp           bool
+	hpZone       ROI
+	hpColor      HPColor
 	ocr          bool
 	ocrLang      string
 	hasTemplates bool
@@ -37,6 +40,8 @@ type loopState struct {
 
 type frameResult struct {
 	gen     int
+	hpRaw   float64 // -1 when not measured
+	black   bool
 	langs   []OcrLang // set when the OCR engine was (re)created
 	small   *image.RGBA
 	feat    Feature
@@ -110,6 +115,10 @@ type App struct {
 	editPanelPB *walk.PushButton
 	bossURLLE   *walk.LineEdit
 	bossOverlay *Overlay
+	hpCB        *walk.CheckBox
+	hpLbl       *walk.Label
+	hpZoneLbl   *walk.Label
+	hpDet       *HPDeath
 	tracker     *BossTracker
 	curBoss     string
 	lastBossHit string
@@ -293,6 +302,17 @@ func (a *App) buildUI() error {
 				PushButton{Text: "Xóa mẫu đã chọn", OnClicked: a.removeTemplate},
 				HSpacer{},
 			),
+			HSeparator{},
+			title("Máu nhân vật (game không có màn chết)"),
+			CheckBox{AssignTo: &a.hpCB, Text: "Đếm khi máu về 0 rồi màn hình tối đen", OnCheckedChanged: a.onHPChanged},
+			form(
+				Label{Text: "Thanh máu"}, row(
+					Label{AssignTo: &a.hpZoneLbl, Text: "Chưa khoanh", StretchFactor: 3},
+					PushButton{Text: "Khoanh thanh máu...", OnClicked: a.calibrateHP},
+				),
+				Label{Text: "Máu hiện tại"}, Label{AssignTo: &a.hpLbl, Text: "--"},
+			),
+			hint("Bấm khoanh lúc đang ĐẦY MÁU. Thanh máu gắn trên người nhân vật (Dead Space): khoanh rộng quanh chỗ nhân vật đứng."),
 			VSpacer{},
 		},
 	}
@@ -657,19 +677,27 @@ func (a *App) captureLoop() {
 			newLangs = ocr.Langs
 		}
 
-		fr := frameResult{gen: st.gen, langs: newLangs}
+		fr := frameResult{gen: st.gen, langs: newLangs, hpRaw: -1}
 		var err error
-		if st.ocr && ocr != nil {
+		if (st.ocr && ocr != nil) || st.hp {
 			ow, oh := OcrSize(st.mon)
 			var big *image.RGBA
 			big, err = CaptureMonitorScaled(st.mon, ow, oh)
 			if err == nil {
 				fr.small = Downscale(big, CaptureW, CaptureH)
-				fr.lines, fr.ocrErr = ocr.Recognize(big)
-				fr.ranOcr = true
+				if st.ocr && ocr != nil {
+					fr.lines, fr.ocrErr = ocr.Recognize(big)
+					fr.ranOcr = true
+				}
+				if st.hp {
+					fr.hpRaw = MeasureHP(big, st.hpZone, st.hpColor)
+				}
 			}
 		} else {
 			fr.small, err = CaptureMonitor(st.mon)
+		}
+		if err == nil {
+			fr.black = IsBlack(fr.small)
 		}
 		if err != nil {
 			if err.Error() != lastErr {
@@ -729,6 +757,25 @@ func (a *App) onFrame(fr frameResult) {
 	}
 	if fr.langs != nil {
 		a.setOcrLanguages(fr.langs)
+	}
+	if fr.hpRaw >= 0 && a.hpDet != nil {
+		ratio := a.hpDet.Ratio(fr.hpRaw)
+		if a.hpDet.Full > a.cur.HPFull*1.05 { // calibration grew: remember it
+			a.cur.HPFull = a.hpDet.Full
+			a.store.SaveProfile(a.cur)
+		}
+		switch {
+		case fr.black:
+			a.hpLbl.SetText("-- (màn hình đen)")
+		case ratio < 0:
+			a.hpLbl.SetText("-- (chưa thấy thanh máu)")
+		default:
+			a.hpLbl.SetText(fmt.Sprintf("%d%%", int(ratio*100+0.5)))
+		}
+		if a.hpDet.Feed(ratio, fr.black, now) && a.det.Trigger(now) {
+			a.addDeath(1, "hp")
+			a.setStatus(fmt.Sprintf("Tự đếm lúc %s (máu về 0 rồi màn hình tối). Đếm sai thì bấm %s.", now.Format("15:04:05"), a.cfg.Hotkeys.Sub))
+		}
 	}
 	var m OcrMatch
 	hit := false
@@ -799,7 +846,9 @@ func (a *App) updateLoop() {
 		st.hasTemplates = len(a.tmplFeats) > 0
 		st.ocr = (a.cur.OcrEnabled || a.cur.BossTrack) && a.ocrAvailable
 		st.ocrLang = a.cur.OcrLang
-		st.enabled = a.cur.AutoEnabled && (st.hasTemplates || st.ocr)
+		st.hp = a.cur.HPEnabled && a.cur.HPColor.Valid()
+		st.hpZone, st.hpColor = a.cur.HPZone, a.cur.HPColor
+		st.enabled = a.cur.AutoEnabled && (st.hasTemplates || st.ocr || st.hp)
 		st.roi = a.cur.ROI
 	}
 	if a.cfg.Monitor >= 0 && a.cfg.Monitor < len(a.monitors) {
@@ -1098,11 +1147,18 @@ func (a *App) saveDeathROI(roi ROI) {
 
 // editRegion shows a screenshot and lets the user drag a rectangle.
 func (a *App) editRegion(title, instr string, initial ROI, showAgreement bool, save func(ROI)) {
+	a.editRegionOn(nil, title, instr, initial, showAgreement, save)
+}
+
+// editRegionOn is editRegion over a given screenshot (nil = template or fresh capture).
+func (a *App) editRegionOn(shot image.Image, title, instr string, initial ROI, showAgreement bool, save func(ROI)) {
 	if a.cur == nil {
 		return
 	}
-	var base image.Image
-	if i := a.tmplLB.CurrentIndex(); i >= 0 && i < len(a.tmplImgs) {
+	base := shot
+	if base != nil {
+		// use the given screenshot
+	} else if i := a.tmplLB.CurrentIndex(); i >= 0 && i < len(a.tmplImgs) {
 		base = a.tmplImgs[i]
 	} else if len(a.tmplImgs) > 0 {
 		base = a.tmplImgs[0]
@@ -1294,6 +1350,7 @@ func (a *App) loadProfile(p *Profile) {
 	a.autoCB.SetChecked(p.AutoEnabled)
 	a.ocrCB.SetChecked(p.OcrEnabled)
 	a.bossCB.SetChecked(p.BossTrack)
+	a.hpCB.SetChecked(p.HPEnabled)
 	a.thrSlider.SetValue(int(p.Threshold*100 + 0.5))
 	a.thrLbl.SetText(fmt.Sprintf("%d%%", int(p.Threshold*100+0.5)))
 	a.cooldownNE.SetValue(p.CooldownSec)
@@ -1310,6 +1367,8 @@ func (a *App) loadProfile(p *Profile) {
 	a.curBoss, a.lastBossHit = "", ""
 	a.refreshLangUI()
 	a.refreshBossZoneLabel()
+	a.hpDet = NewHPDeath(p.HPFull)
+	a.refreshHPLabel()
 	a.refreshBosses()
 }
 
@@ -2268,4 +2327,84 @@ func (a *App) restart() {
 		walk.MsgBox(a.mw, "Death Counter", "Đã đổi thư mục. Hãy mở lại app.", walk.MsgBoxIconInformation)
 	}
 	a.mw.Close()
+}
+
+// ---------- health bar ----------
+
+func (a *App) refreshHPLabel() {
+	if a.cur == nil || a.hpZoneLbl == nil {
+		return
+	}
+	if !a.cur.HPColor.Valid() {
+		a.hpZoneLbl.SetText("Chưa khoanh")
+		a.hpLbl.SetText("--")
+		return
+	}
+	z := a.cur.HPZone
+	a.hpZoneLbl.SetText(fmt.Sprintf("x %d%%, y %d%%, %d×%d%% · màu %.0f°", int(z.X*100), int(z.Y*100), int(z.W*100), int(z.H*100), a.cur.HPColor.Hue))
+	if !a.cur.HPEnabled {
+		a.hpLbl.SetText("-- (đang tắt)")
+	}
+}
+
+func (a *App) onHPChanged() {
+	if a.suppress || a.cur == nil || a.hpCB == nil {
+		return
+	}
+	a.cur.HPEnabled = a.hpCB.Checked()
+	a.store.SaveProfile(a.cur)
+	if a.cur.HPEnabled && !a.cur.HPColor.Valid() {
+		a.setStatus("Bấm \"Khoanh thanh máu...\" lúc đang đầy máu để app học màu thanh máu.")
+	}
+	a.refreshHPLabel()
+	a.updateLoop()
+}
+
+// calibrateHP hides the app, grabs the game screen, then lets the user draw
+// around the (full) health bar; the bar color is learned from that frame.
+func (a *App) calibrateHP() {
+	if a.cur == nil {
+		return
+	}
+	mon := a.currentMonitor()
+	a.mw.SetVisible(false)
+	a.overlay.Show(false)
+	a.bossOverlay.Show(false)
+	time.AfterFunc(500*time.Millisecond, func() {
+		a.mw.Synchronize(func() {
+			ow, oh := OcrSize(mon)
+			shot, err := CaptureMonitorScaled(mon, ow, oh)
+			a.mw.SetVisible(true)
+			a.overlay.Show(a.cfg.OverlayEnabled)
+			a.bossOverlay.Show(a.cfg.BossPanelEnabled)
+			if err != nil {
+				a.setStatus("Không chụp được màn hình: " + err.Error())
+				return
+			}
+			init := a.cur.HPZone
+			if init.W <= 0 {
+				init = ROI{0.05, 0.05, 0.4, 0.15}
+			}
+			a.editRegionOn(shot, "Khoanh thanh máu - "+a.cur.Name,
+				"Kéo chuột khoanh THANH MÁU nhân vật (lúc đang đầy máu).\nHUD thường: khoanh sát thanh máu. Máu trên người nhân vật (Dead Space): khoanh rộng quanh nhân vật.",
+				init, false, func(r ROI) {
+					c, ok := LearnHPColor(shot, r)
+					if !ok {
+						walk.MsgBox(a.mw, "Thanh máu", "Không tìm thấy màu nổi bật trong vùng này.\nHãy khoanh lúc đầy máu, và khoanh sát thanh máu hơn.", walk.MsgBoxIconWarning)
+						return
+					}
+					a.cur.HPZone, a.cur.HPColor = r, c
+					a.cur.HPFull = MeasureHP(shot, r, c)
+					a.cur.HPEnabled = true
+					a.store.SaveProfile(a.cur)
+					a.hpDet = NewHPDeath(a.cur.HPFull)
+					a.suppress = true
+					a.hpCB.SetChecked(true)
+					a.suppress = false
+					a.refreshHPLabel()
+					a.updateLoop()
+					a.setStatus(fmt.Sprintf("Đã học màu thanh máu (%.0f°). App sẽ đếm khi máu về 0 rồi màn hình tối.", c.Hue))
+				})
+		})
+	})
 }
