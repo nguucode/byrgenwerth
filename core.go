@@ -1005,10 +1005,44 @@ func MigrateLegacyData(src, dst string) (bool, error) {
 	if _, err := os.Stat(filepath.Join(src, "profiles")); err != nil {
 		return false, nil
 	}
-	if ents, err := os.ReadDir(filepath.Join(dst, "profiles")); err == nil && len(ents) > 0 {
+	if DirHasData(dst) {
 		return false, nil
 	}
-	err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+	err := CopyDataDir(src, dst)
+	return err == nil, err
+}
+
+// ---------- custom data folder ----------
+
+// dataPointerFile lives in the default folder and holds the user's chosen folder.
+const dataPointerFile = "datadir.txt"
+
+// DirHasData reports whether dir already holds Death Counter data.
+func DirHasData(dir string) bool {
+	if ents, err := os.ReadDir(filepath.Join(dir, "profiles")); err == nil && len(ents) > 0 {
+		return true
+	}
+	return false
+}
+
+// CheckWritable creates dir if needed and verifies files can be written there.
+func CheckWritable(dir string) error {
+	if strings.TrimSpace(dir) == "" {
+		return errors.New("đường dẫn trống")
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	test := filepath.Join(dir, ".dc_write_test")
+	if err := os.WriteFile(test, []byte("ok"), 0o644); err != nil {
+		return err
+	}
+	return os.Remove(test)
+}
+
+// CopyDataDir copies every data file from src to dst (the pointer file is not copied).
+func CopyDataDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -1020,7 +1054,7 @@ func MigrateLegacyData(src, dst string) (bool, error) {
 		if info.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}
-		if strings.HasSuffix(path, ".tmp") {
+		if strings.HasSuffix(path, ".tmp") || rel == dataPointerFile {
 			return nil
 		}
 		b, err := os.ReadFile(path)
@@ -1029,7 +1063,35 @@ func MigrateLegacyData(src, dst string) (bool, error) {
 		}
 		return os.WriteFile(target, b, 0o644)
 	})
-	return err == nil, err
+}
+
+// ResolveDataDir returns the folder to use: the user's choice if it is reachable,
+// otherwise defaultDir plus a warning explaining why.
+func ResolveDataDir(defaultDir string) (dir, warn string) {
+	b, err := os.ReadFile(filepath.Join(defaultDir, dataPointerFile))
+	custom := strings.TrimSpace(string(b))
+	if err != nil || custom == "" || filepath.Clean(custom) == filepath.Clean(defaultDir) {
+		return defaultDir, ""
+	}
+	if err := CheckWritable(custom); err != nil {
+		return defaultDir, "Không truy cập được thư mục dữ liệu " + custom + " (" + err.Error() + "). Đang tạm dùng thư mục mặc định."
+	}
+	return custom, ""
+}
+
+// SetDataDir records newDir as the data folder; "" or defaultDir means default.
+func SetDataDir(defaultDir, newDir string) error {
+	if err := os.MkdirAll(defaultDir, 0o755); err != nil {
+		return err
+	}
+	ptr := filepath.Join(defaultDir, dataPointerFile)
+	if newDir == "" || filepath.Clean(newDir) == filepath.Clean(defaultDir) {
+		if err := os.Remove(ptr); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	return writeAtomic(ptr, []byte(filepath.Clean(newDir)))
 }
 
 // ---------- colors ----------

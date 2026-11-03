@@ -18,7 +18,7 @@ shows the count as an on-screen overlay or in OBS, and tracks which bosses kill 
 - **Text style**: font, size, bold, color, outline width and color.
 - **Hotkeys**: F9 +1 and learn template · F10 −1 · F11 capture template · F8 toggle detection.
 - **Optional sound** on every count (bring your own .mp3 / .wav).
-- One portable `.exe`, no installer, no internet needed. Data lives in `%APPDATA%\DeathCounter`.
+- One portable `.exe`, no installer, no internet needed. Data lives in `%APPDATA%\DeathCounter` or any folder you choose.
 
 ![Text styles in OBS](docs/images/text-styles.png)
 
@@ -73,7 +73,7 @@ App Windows nhỏ gọn **tự đếm số lần chết** khi chơi game. App đ
 - **Kiểu chữ**: font, cỡ chữ, đậm, màu chữ, viền và màu viền.
 - **Phím tắt**: F9 +1 và học mẫu · F10 −1 · F11 chụp mẫu · F8 bật/tắt nhận diện.
 - **Âm thanh xác nhận** mỗi lần đếm (tự chọn file .mp3 / .wav).
-- Một file `.exe` duy nhất, không cần cài, không cần internet. Dữ liệu lưu ở `%APPDATA%\DeathCounter`.
+- Một file `.exe` duy nhất, không cần cài, không cần internet. Dữ liệu lưu ở `%APPDATA%\DeathCounter` hoặc thư mục bạn tự chọn.
 
 ### Bắt đầu nhanh
 

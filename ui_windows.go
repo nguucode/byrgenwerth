@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -65,6 +66,8 @@ type App struct {
 	ocrAvailable bool
 	ocrInitErr   string
 	migrated     bool
+	dirWarn      string
+	dataDirLE    *walk.LineEdit
 
 	hk       *HotkeyManager
 	hkErrors []string
@@ -135,26 +138,60 @@ type App struct {
 	previewBmp *walk.Bitmap
 }
 
-// dataDir is %APPDATA%\\DeathCounter. Data from older versions, which lived in
-// "DeathCounterData" next to the exe, is copied over once.
-func dataDir() (dir string, migrated bool) {
+// defaultDataDir is %APPDATA%\\DeathCounter. It always holds the pointer to a
+// custom data folder, if the user chose one.
+func defaultDataDir() string {
 	base := os.Getenv("APPDATA")
 	if base == "" {
 		if h, err := os.UserHomeDir(); err == nil {
 			base = filepath.Join(h, "AppData", "Roaming")
 		}
 	}
-	dir = filepath.Join(base, "DeathCounter")
+	dir := filepath.Join(base, "DeathCounter")
 	os.MkdirAll(dir, 0o755)
+	return dir
+}
+
+// dataDir resolves the data folder. Data from very old versions, which lived in
+// "DeathCounterData" next to the exe, is copied over once.
+func dataDir() (dir string, migrated bool, warn string) {
+	def := defaultDataDir()
+	dir, warn = ResolveDataDir(def)
 	if exe, err := os.Executable(); err == nil {
 		migrated, _ = MigrateLegacyData(filepath.Join(filepath.Dir(exe), "DeathCounterData"), dir)
 	}
-	return dir, migrated
+	return dir, migrated, warn
+}
+
+// waitForPreviousInstance: after "change data folder" the app restarts itself with
+// --after=<pid>; wait for the old process so hotkeys and the OBS port are free.
+func waitForPreviousInstance() {
+	for _, arg := range os.Args[1:] {
+		if !strings.HasPrefix(arg, "--after=") {
+			continue
+		}
+		var pid int
+		fmt.Sscanf(strings.TrimPrefix(arg, "--after="), "%d", &pid)
+		if pid <= 0 {
+			return
+		}
+		p, err := os.FindProcess(pid)
+		if err != nil {
+			return
+		}
+		done := make(chan struct{})
+		go func() { p.Wait(); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(8 * time.Second):
+		}
+	}
 }
 
 func main() {
-	dir, migrated := dataDir()
-	a := &App{store: &Store{Dir: dir}, quit: make(chan struct{}), ocrAvailable: true, migrated: migrated}
+	waitForPreviousInstance()
+	dir, migrated, warn := dataDir()
+	a := &App{store: &Store{Dir: dir}, quit: make(chan struct{}), ocrAvailable: true, migrated: migrated, dirWarn: warn}
 	a.cfg = a.store.LoadConfig()
 	a.monitors = ListMonitors()
 	if a.cfg.Monitor < 0 || a.cfg.Monitor >= len(a.monitors) {
@@ -339,7 +376,7 @@ func (a *App) buildUI() error {
 	}
 
 	soundTab := TabPage{
-		Title:  "Âm thanh",
+		Title:  "Cài đặt",
 		Layout: pageLayout,
 		Children: []Widget{
 			title("Âm thanh xác nhận"),
@@ -362,6 +399,20 @@ func (a *App) buildUI() error {
 				),
 			),
 			hint("App không kèm sẵn âm thanh: tự chọn file .mp3 hoặc .wav của bạn. Âm lượng chỉ áp dụng cho mp3."),
+			HSeparator{},
+			title("Dữ liệu"),
+			form(
+				Label{Text: "Thư mục"}, row(
+					LineEdit{AssignTo: &a.dataDirLE, ReadOnly: true, Text: a.store.Dir, StretchFactor: 3},
+					PushButton{Text: "Đổi...", OnClicked: a.chooseDataDir},
+					PushButton{Text: "Mặc định", OnClicked: func() { a.switchDataDir(defaultDataDir()) }},
+				),
+			),
+			hint("Gồm số đếm, ảnh mẫu, thống kê boss, cài đặt. Đổi thư mục: app chép dữ liệu sang rồi tự mở lại; dữ liệu ở chỗ cũ được giữ nguyên."),
+			row(
+				PushButton{Text: "Mở thư mục dữ liệu", OnClicked: a.openDataDir},
+				HSpacer{},
+			),
 			VSpacer{},
 		},
 	}
@@ -524,6 +575,10 @@ func (a *App) init() {
 		a.setStatus("Cảnh báo phím tắt: " + strings.Join(a.hkErrors, "; "))
 	} else {
 		a.setStatus("Sẵn sàng. Khi chết mà app chưa tự nhận ra, bấm " + h.Add + ".")
+	}
+	if a.dirWarn != "" {
+		a.setStatus(a.dirWarn)
+		walk.MsgBox(a.mw, "Thư mục dữ liệu", a.dirWarn, walk.MsgBoxIconWarning)
 	}
 	if a.migrated {
 		a.setStatus("Đã chuyển dữ liệu cũ sang " + a.store.Dir + ". Nhớ cập nhật đường dẫn file trong OBS (nút Copy).")
@@ -2147,4 +2202,70 @@ func (a *App) resetPanelPos() {
 	a.bossOverlay.MoveTo(x, y)
 	a.cfg.BossPanelX, a.cfg.BossPanelY, a.cfg.BossPanelPosSet = x, y, true
 	a.saveConfig()
+}
+
+// ---------- data folder ----------
+
+func (a *App) chooseDataDir() {
+	dlg := walk.FileDialog{Title: "Chọn thư mục lưu dữ liệu Death Counter", InitialDirPath: a.store.Dir}
+	ok, err := dlg.ShowBrowseFolder(a.mw)
+	if err != nil || !ok || strings.TrimSpace(dlg.FilePath) == "" {
+		return
+	}
+	a.switchDataDir(dlg.FilePath)
+}
+
+// switchDataDir moves the app to target: copies the current data there when it is
+// empty, or adopts the data already there, then restarts the app.
+func (a *App) switchDataDir(target string) {
+	target = filepath.Clean(target)
+	if strings.EqualFold(target, filepath.Clean(a.store.Dir)) {
+		a.setStatus("Đang dùng thư mục này rồi.")
+		return
+	}
+	if err := CheckWritable(target); err != nil {
+		walk.MsgBox(a.mw, "Thư mục dữ liệu", "Không ghi được vào thư mục này:\n"+target+"\n\n"+err.Error()+
+			"\n\nThư mục hệ thống như C:\\Program Files cần quyền Admin; hãy chọn thư mục khác.", walk.MsgBoxIconWarning)
+		return
+	}
+	a.saveConfig()
+	if a.cur != nil {
+		a.store.SaveProfile(a.cur)
+	}
+	if DirHasData(target) {
+		msg := "Thư mục này đã có dữ liệu Death Counter:\n" + target +
+			"\n\nDùng dữ liệu đó? Dữ liệu hiện tại vẫn giữ nguyên ở:\n" + a.store.Dir
+		if walk.MsgBox(a.mw, "Thư mục dữ liệu", msg, walk.MsgBoxYesNo|walk.MsgBoxIconQuestion) != walk.DlgCmdYes {
+			return
+		}
+	} else {
+		msg := "Chép toàn bộ dữ liệu sang:\n" + target + "\n\nrồi mở lại app với thư mục mới?\nDữ liệu ở chỗ cũ vẫn giữ nguyên."
+		if walk.MsgBox(a.mw, "Thư mục dữ liệu", msg, walk.MsgBoxYesNo|walk.MsgBoxIconQuestion) != walk.DlgCmdYes {
+			return
+		}
+		if err := CopyDataDir(a.store.Dir, target); err != nil {
+			walk.MsgBox(a.mw, "Thư mục dữ liệu", "Chép dữ liệu thất bại, vẫn dùng thư mục cũ:\n"+err.Error(), walk.MsgBoxIconError)
+			return
+		}
+	}
+	if err := SetDataDir(defaultDataDir(), target); err != nil {
+		walk.MsgBox(a.mw, "Thư mục dữ liệu", "Không lưu được lựa chọn:\n"+err.Error(), walk.MsgBoxIconError)
+		return
+	}
+	a.restart()
+}
+
+// restart launches a fresh copy that waits for this one to exit, then closes.
+func (a *App) restart() {
+	exe, err := os.Executable()
+	if err != nil {
+		walk.MsgBox(a.mw, "Death Counter", "Đã đổi thư mục. Hãy mở lại app.", walk.MsgBoxIconInformation)
+		a.mw.Close()
+		return
+	}
+	cmd := exec.Command(exe, fmt.Sprintf("--after=%d", os.Getpid()))
+	if err := cmd.Start(); err != nil {
+		walk.MsgBox(a.mw, "Death Counter", "Đã đổi thư mục. Hãy mở lại app.", walk.MsgBoxIconInformation)
+	}
+	a.mw.Close()
 }

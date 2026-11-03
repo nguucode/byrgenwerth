@@ -11,7 +11,7 @@ The app's interface is in Vietnamese. This guide gives each label in Vietnamese 
 3. [Add a game](#3-add-a-game)
 4. [Nhận diện tab (detection)](#4-nhận-diện-tab-detection)
 5. [Hiển thị tab (display: overlay and OBS)](#5-hiển-thị-tab-display-overlay-and-obs)
-6. [Âm thanh tab (sound)](#6-âm-thanh-tab-sound)
+6. [Cài đặt tab (settings: sound and data)](#6-cài-đặt-tab-settings-sound-and-data)
 7. [Boss tab: top 3 bosses](#7-boss-tab-top-3-bosses)
 8. [Hotkeys](#8-hotkeys)
 9. [Where data is stored](#9-where-data-is-stored)
@@ -33,7 +33,7 @@ Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, W
 
 - **Game**: the game you are playing. Each game has its own count, templates, keywords and boss stats.
 - **Số lần chết** (deaths): the big red number, with **+1**, **−1** and **Reset** buttons.
-- **4 tabs**: Nhận diện (detection), Hiển thị (display), Âm thanh (sound), Boss.
+- **4 tabs**: Nhận diện (detection), Hiển thị (display), Cài đặt (settings), Boss.
 - **Cửa sổ app luôn nằm trên**: keep the app window always on top.
 - The last line is the **status**: what the app just did, or any error.
 
@@ -104,7 +104,9 @@ OBS only records this overlay with **Display Capture**. With Game Capture, use t
 
 Legacy option: tick **Ghi thêm file text** and use OBS *Text (GDI+) → Read from file*. This does not keep the style.
 
-## 6. Âm thanh tab (sound)
+## 6. Cài đặt tab (settings: sound and data)
+
+### Sound
 
 No sound file is bundled.
 
@@ -113,6 +115,17 @@ No sound file is bundled.
 3. **Âm lượng** (volume, mp3 only), **Nghe thử** (test).
 
 Plays on every +1 (automatic, F9 or button), not on −1. **Bỏ âm thanh** removes it.
+
+### Data folder
+
+Data lives in `%APPDATA%\DeathCounter` by default. To keep it elsewhere (drive D:, a OneDrive folder to sync two PCs...):
+
+1. Click **Đổi...** (change) and pick a folder.
+2. Empty folder: the app asks, then **copies** your current data there. Folder that already has Death Counter data: the app asks, then **uses** that data.
+3. The app restarts with the new folder. The old copy is kept; delete it yourself when you no longer need it.
+
+**Mặc định** (default) goes back to `%APPDATA%\DeathCounter`. System folders like `C:\Program Files` can't be used (they need admin rights).
+If the chosen folder becomes unreachable (USB unplugged, drive letter changed), the app falls back to the default folder and tells you.
 
 ## 7. Boss tab: top 3 bosses
 
@@ -151,7 +164,7 @@ To change them, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and re
 
 ## 9. Where data is stored
 
-`C:\Users\<you>\AppData\Roaming\DeathCounter\` (button **Mở thư mục** in the Hiển thị tab):
+By default `C:\Users\<you>\AppData\Roaming\DeathCounter\`, or the folder you chose in the Cài đặt tab (button **Mở thư mục dữ liệu**):
 
 | File | Content |
 |---|---|
@@ -161,7 +174,7 @@ To change them, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and re
 | `history.csv` | Log of every +1/−1, opens in Excel. |
 | `obs_deaths.txt` | Text file for OBS (if enabled). |
 
-Back up by copying the whole folder.
+Back up by copying the whole folder. To move it, see [section 6](#data-folder).
 
 ## 10. Troubleshooting
 

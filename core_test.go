@@ -622,3 +622,57 @@ func TestEffectiveKeywords(t *testing.T) {
 		t.Fatal("profile keywords should win")
 	}
 }
+
+func TestCustomDataDir(t *testing.T) {
+	def, custom := t.TempDir(), filepath.Join(t.TempDir(), "My Data")
+	if d, w := ResolveDataDir(def); d != def || w != "" {
+		t.Fatal("no pointer -> default")
+	}
+	// Put some data in the default folder, then move to the custom folder.
+	old := &Store{Dir: def}
+	p, _ := old.CreateProfile("Elden Ring")
+	p.Deaths = 5
+	old.SaveProfile(p)
+	if err := CheckWritable(custom); err != nil {
+		t.Fatal(err)
+	}
+	if DirHasData(custom) {
+		t.Fatal("new folder should be empty")
+	}
+	if err := CopyDataDir(def, custom); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetDataDir(def, custom); err != nil {
+		t.Fatal(err)
+	}
+	d, w := ResolveDataDir(def)
+	if d != filepath.Clean(custom) || w != "" {
+		t.Fatalf("resolve: %q %q", d, w)
+	}
+	ps, _ := (&Store{Dir: d}).LoadProfiles()
+	if len(ps) != 1 || ps[0].Deaths != 5 {
+		t.Fatal("data not copied")
+	}
+	if _, err := os.Stat(filepath.Join(custom, dataPointerFile)); err == nil {
+		t.Fatal("pointer file must not be copied into the data folder")
+	}
+	if !DirHasData(custom) {
+		t.Fatal("DirHasData")
+	}
+	// Folder disappears (USB unplugged): fall back with a warning.
+	os.RemoveAll(custom)
+	os.WriteFile(filepath.Join(custom), []byte("now a file, not a folder"), 0o644)
+	if d, w := ResolveDataDir(def); d != def || w == "" {
+		t.Fatalf("unreachable folder should fall back with warning: %q %q", d, w)
+	}
+	// Back to default removes the pointer.
+	if err := SetDataDir(def, ""); err != nil {
+		t.Fatal(err)
+	}
+	if d, w := ResolveDataDir(def); d != def || w != "" {
+		t.Fatal("reset to default failed")
+	}
+	if err := CheckWritable(""); err == nil {
+		t.Fatal("empty path must be rejected")
+	}
+}

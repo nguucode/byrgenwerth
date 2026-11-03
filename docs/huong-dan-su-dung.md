@@ -9,7 +9,7 @@
 3. [Thêm game](#3-thêm-game)
 4. [Tab Nhận diện: tự đếm số lần chết](#4-tab-nhận-diện-tự-đếm-số-lần-chết)
 5. [Tab Hiển thị: overlay và OBS](#5-tab-hiển-thị-overlay-và-obs)
-6. [Tab Âm thanh](#6-tab-âm-thanh)
+6. [Tab Cài đặt: âm thanh và dữ liệu](#6-tab-cài-đặt-âm-thanh-và-dữ-liệu)
 7. [Tab Boss: Top 3 boss](#7-tab-boss-top-3-boss)
 8. [Phím tắt](#8-phím-tắt)
 9. [Dữ liệu được lưu ở đâu](#9-dữ-liệu-được-lưu-ở-đâu)
@@ -31,7 +31,7 @@ Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclu
 
 - **Game**: chọn game đang chơi; mỗi game có số đếm, ảnh mẫu, từ khóa và thống kê boss riêng.
 - **Số lần chết**: số lớn màu đỏ. Các nút **+1**, **−1** và **Reset** để chỉnh tay.
-- **4 tab** cài đặt: Nhận diện, Hiển thị, Âm thanh, Boss.
+- **4 tab**: Nhận diện, Hiển thị, Cài đặt, Boss.
 - **Cửa sổ app luôn nằm trên**: giữ cửa sổ app nổi trên các cửa sổ khác.
 - Dòng cuối là **trạng thái**: app vừa làm gì, lỗi gì nếu có.
 
@@ -102,7 +102,9 @@ OBS chỉ quay được overlay này khi dùng **Display Capture**. Dùng Game C
 
 Cách cũ: tick **Ghi thêm file text**, rồi trong OBS dùng *Text (GDI+) → Read from file* với đường dẫn file. Cách này không giữ kiểu chữ.
 
-## 6. Tab Âm thanh
+## 6. Tab Cài đặt: âm thanh và dữ liệu
+
+### Âm thanh
 
 App **không kèm sẵn âm thanh**.
 
@@ -111,6 +113,17 @@ App **không kèm sẵn âm thanh**.
 3. Chỉnh **Âm lượng** (chỉ có tác dụng với mp3), bấm **Nghe thử**.
 
 Âm thanh phát mỗi lần +1 (tự đếm, F9 hay nút bấm), không phát khi −1. **Bỏ âm thanh** để tắt hẳn.
+
+### Dữ liệu
+
+Mặc định dữ liệu nằm ở `%APPDATA%\DeathCounter`. Muốn để chỗ khác (ổ D, thư mục OneDrive để đồng bộ giữa hai máy...):
+
+1. Bấm **Đổi...**, chọn thư mục.
+2. Thư mục trống: app hỏi rồi **chép** dữ liệu hiện tại sang. Thư mục đã có dữ liệu Death Counter: app hỏi rồi **dùng luôn** dữ liệu đó.
+3. App tự mở lại với thư mục mới. Dữ liệu ở chỗ cũ vẫn giữ nguyên, bạn tự xóa khi không cần.
+
+**Mặc định** đưa về `%APPDATA%\DeathCounter`. Không chọn được thư mục hệ thống như `C:\Program Files` (cần quyền Admin).
+Nếu thư mục đã chọn không còn truy cập được (rút USB, đổi ổ), app tạm dùng thư mục mặc định và báo cho bạn.
 
 ## 7. Tab Boss: Top 3 boss
 
@@ -149,7 +162,7 @@ Phím tắt hoạt động cả khi đang ở trong game. Game sẽ không nhậ
 
 ## 9. Dữ liệu được lưu ở đâu
 
-`C:\Users\<tên>\AppData\Roaming\DeathCounter\` (nút **Mở thư mục** trong tab Hiển thị):
+Mặc định `C:\Users\<tên>\AppData\Roaming\DeathCounter\`, hoặc thư mục bạn chọn ở tab Cài đặt (nút **Mở thư mục dữ liệu**):
 
 | File | Nội dung |
 |---|---|
@@ -159,7 +172,7 @@ Phím tắt hoạt động cả khi đang ở trong game. Game sẽ không nhậ
 | `history.csv` | Nhật ký từng lần +1/−1, mở bằng Excel được. |
 | `obs_deaths.txt` | File text cho OBS (nếu bật). |
 
-Sao lưu: copy cả thư mục này.
+Sao lưu: copy cả thư mục này. Đổi chỗ lưu: xem [mục 6](#dữ-liệu).
 
 ## 10. Xử lý sự cố
 
