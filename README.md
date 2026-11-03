@@ -43,7 +43,7 @@ Full walkthrough: **[docs/user-guide.md](docs/user-guide.md)**.
 
 ## Build from source
 
-Requires Go 1.24+.
+Requires Go 1.24+. Releases are built on Windows by GitHub Actions when a `v*` tag is pushed (`.github/workflows/release.yml`).
 
 ```sh
 go test ./...
