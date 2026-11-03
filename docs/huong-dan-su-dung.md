@@ -39,7 +39,7 @@ Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclu
 - **Game**: chọn game đang chơi; mỗi game có số đếm, ảnh mẫu, từ khóa và thống kê boss riêng.
 - **Số lần chết**: số lớn màu đỏ. Các nút **+1**, **−1** và **Reset** để chỉnh tay.
 - **4 tab**: Nhận diện, Hiển thị, Cài đặt, Boss.
-- **Cửa sổ app luôn nằm trên**: giữ cửa sổ app nổi trên các cửa sổ khác.
+- **Cửa sổ app luôn nằm trên**: giữ cửa sổ app nổi trên các cửa sổ khác. Khi một game toàn màn hình (kể cả Borderless) được mở lên trước, cửa sổ app tự thu nhỏ; bấm F7 để gọi lại.
 - Dòng cuối là **trạng thái**: app vừa làm gì, lỗi gì nếu có.
 
 ## 3. Thêm game
@@ -199,7 +199,7 @@ Không hoàn tác được. Muốn giữ số đếm thì copy `DeathCounterData
 | F10 | −1 (sửa khi đếm nhầm). |
 | F11 | Chỉ chụp ảnh mẫu, không đếm. |
 | F8 | Bật/tắt tự nhận diện. |
-| F7 | Ẩn/hiện cửa sổ app. Nhận diện, overlay và OBS vẫn chạy. |
+| F7 | Ẩn/hiện cửa sổ app (cũng gọi lại cửa sổ sau khi nó tự thu nhỏ vì game). Nhận diện, overlay và OBS vẫn chạy. |
 
 Phím tắt hoạt động cả khi đang ở trong game. Game sẽ không nhận được các phím này.
 Đổi phím: mở `config.json` trong thư mục dữ liệu, sửa mục `hotkeys` (ví dụ `"add": "Ctrl+F9"`), rồi mở lại app.
@@ -243,6 +243,7 @@ Game đang ở Exclusive Fullscreen. Chuyển sang Borderless.
 3. Thêm từ khóa màn chết bằng ngôn ngữ đó vào ô **Từ khóa**. Không cần đúng dấu: "BẠN ĐÃ CHẾT" khớp cả "BAN DA CHET". Mẫu của các game hiện "YOU DIED" đã có sẵn "BẠN ĐÃ CHẾT" cho bản Việt hóa.
 
 ### Boss không được ghi nhận
+- **Thống kê** chỉ có dữ liệu khi bạn chết: boss hiện trong danh sách sau lần đầu nó giết bạn, không phải lúc thanh máu boss xuất hiện.
 - Xem dòng **Đang đánh** trong lúc đánh boss.
 - Trống: tên boss có thể nằm ngoài vùng tự động hoặc chữ quá nhỏ. Bấm **Khoanh vùng...** ở tab Boss và khoanh quanh tên boss.
 - Ra sai tên (bắt nhầm chữ khác): khoanh vùng hẹp hơn, sửa tên trong **Thống kê**.

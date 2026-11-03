@@ -676,3 +676,20 @@ func TestLegacyDataDirsAndRemove(t *testing.T) {
 		t.Fatal("empty path must be rejected")
 	}
 }
+
+func TestDropLinesInside(t *testing.T) {
+	own := line("Deaths: 0", 0.9, 0.02, 0.014)    // the app's overlay, top-right
+	boss := line("Asylum Demon", 0.1, 0.8, 0.025) // the game's boss label
+	app := []ROI{{X: 0.85, Y: 0, W: 0.15, H: 0.06}}
+	got := DropLinesInside([]OcrLine{own, boss}, app)
+	if len(got) != 1 || got[0].Text != "Asylum Demon" {
+		t.Fatalf("own text must be dropped, game text kept: %+v", got)
+	}
+	// Dark Souls puts the name at the left end of the bottom bar.
+	if c := BossCandidates([]OcrLine{boss}, DefaultBossZones, DefaultKeywords); len(c) != 1 {
+		t.Fatalf("Dark Souls boss label should be a candidate: %v", c)
+	}
+	if len(DropLinesInside([]OcrLine{own}, nil)) != 1 {
+		t.Fatal("no rects: keep everything")
+	}
+}

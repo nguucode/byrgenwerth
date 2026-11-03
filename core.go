@@ -767,6 +767,34 @@ func ClampToMonitors(x, y int32, rects [][4]int32) (int32, int32, bool) {
 	return rects[0][0] + 50, rects[0][1] + 50, false
 }
 
+// DropLinesInside removes OCR lines centered inside any of rects (normalized to
+// the captured monitor), so the app never reads its own overlay or window.
+func DropLinesInside(lines []OcrLine, rects []ROI) []OcrLine {
+	if len(rects) == 0 {
+		return lines
+	}
+	out := lines[:0:0]
+	for _, ln := range lines {
+		x0, y0, x1, y1 := 1.0, 1.0, 0.0, 0.0
+		for _, w := range ln.Words {
+			x0, y0 = math.Min(x0, w.X), math.Min(y0, w.Y)
+			x1, y1 = math.Max(x1, w.X+w.W), math.Max(y1, w.Y+w.H)
+		}
+		cx, cy := (x0+x1)/2, (y0+y1)/2
+		inside := false
+		for _, r := range rects {
+			if cx >= r.X && cx <= r.X+r.W && cy >= r.Y && cy <= r.Y+r.H {
+				inside = true
+				break
+			}
+		}
+		if !inside {
+			out = append(out, ln)
+		}
+	}
+	return out
+}
+
 // ---------- OCR keyword matching ----------
 
 // OcrWord has its box normalized to 0..1 of the captured image.

@@ -15,6 +15,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
@@ -72,6 +73,7 @@ type App struct {
 	migrated     bool
 	dirWarn      string
 	uninstalling bool
+	lastFg       win.HWND // foreground window last seen by autoHideForGame
 
 	hk       *HotkeyManager
 	hkErrors []string
@@ -621,8 +623,9 @@ func (a *App) init() {
 			select {
 			case <-a.quit:
 				return
-			case <-time.After(3 * time.Second):
+			case <-time.After(time.Second):
 				a.mw.Synchronize(func() {
+					a.autoHideForGame()
 					if a.cfg.OverlayEnabled && !a.overlay.Editing() {
 						a.overlay.KeepOnTop()
 					}
@@ -778,6 +781,7 @@ func (a *App) onFrame(fr frameResult) {
 	var m OcrMatch
 	hit := false
 	if fr.ranOcr {
+		fr.lines = DropLinesInside(fr.lines, a.ownRects())
 		if fr.ocrErr != nil {
 			a.ocrLbl.SetText("Lỗi: " + fr.ocrErr.Error())
 		} else {
@@ -876,6 +880,77 @@ func (a *App) updateLoop() {
 	}
 }
 
+// ownRects returns the app's visible windows (main window, overlay, boss panel)
+// normalized to the game monitor, so OCR can ignore the app's own text.
+func (a *App) ownRects() []ROI {
+	mon := a.currentMonitor().Rect
+	mw, mh := float64(mon.Right-mon.Left), float64(mon.Bottom-mon.Top)
+	hwnds := []win.HWND{a.mw.Handle()}
+	if a.overlay != nil {
+		hwnds = append(hwnds, a.overlay.hwnd)
+	}
+	if a.bossOverlay != nil {
+		hwnds = append(hwnds, a.bossOverlay.hwnd)
+	}
+	var out []ROI
+	for _, h := range hwnds {
+		if h == 0 || !win.IsWindowVisible(h) || win.IsIconic(h) {
+			continue
+		}
+		var r win.RECT
+		win.GetWindowRect(h, &r)
+		out = append(out, ROI{
+			X: float64(r.Left-mon.Left) / mw, Y: float64(r.Top-mon.Top) / mh,
+			W: float64(r.Right-r.Left) / mw, H: float64(r.Bottom-r.Top) / mh,
+		})
+	}
+	return out
+}
+
+// autoHideForGame minimizes the app window when another program's full-screen
+// window (a game, borderless or exclusive) comes to the front. It acts once per
+// switch, so F7 can still bring the app back while the game runs.
+func (a *App) autoHideForGame() {
+	fg := win.GetForegroundWindow()
+	if fg == a.lastFg {
+		return
+	}
+	a.lastFg = fg
+	h := a.mw.Handle()
+	if isOtherFullscreen(fg) && a.mw.Visible() && !win.IsIconic(h) {
+		win.ShowWindow(h, win.SW_SHOWMINNOACTIVE)
+	}
+}
+
+// isOtherFullscreen reports whether h belongs to another process and covers its
+// whole monitor. The desktop and taskbar are not games.
+func isOtherFullscreen(h win.HWND) bool {
+	if h == 0 {
+		return false
+	}
+	var pid uint32
+	win.GetWindowThreadProcessId(h, &pid)
+	if int(pid) == os.Getpid() {
+		return false
+	}
+	cls := make([]uint16, 64)
+	win.GetClassName(h, &cls[0], len(cls))
+	switch syscall.UTF16ToString(cls) {
+	case "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd":
+		return false
+	}
+	var r win.RECT
+	if !win.GetWindowRect(h, &r) {
+		return false
+	}
+	mi := win.MONITORINFO{CbSize: uint32(unsafe.Sizeof(win.MONITORINFO{}))}
+	if !win.GetMonitorInfo(win.MonitorFromWindow(h, win.MONITOR_DEFAULTTONEAREST), &mi) {
+		return false
+	}
+	m := mi.RcMonitor
+	return r.Left <= m.Left && r.Top <= m.Top && r.Right >= m.Right && r.Bottom >= m.Bottom
+}
+
 func (a *App) currentMonitor() Monitor {
 	if a.cfg.Monitor >= 0 && a.cfg.Monitor < len(a.monitors) {
 		return a.monitors[a.cfg.Monitor]
@@ -887,11 +962,15 @@ func (a *App) currentMonitor() Monitor {
 
 func (a *App) onHotkey(act HotkeyAction) {
 	if act == ActWindow {
-		a.mw.SetVisible(!a.mw.Visible())
-		if a.mw.Visible() {
-			a.applyTopMost()
-			win.SetForegroundWindow(a.mw.Handle())
+		h := a.mw.Handle()
+		if a.mw.Visible() && !win.IsIconic(h) {
+			a.mw.SetVisible(false)
+			return
 		}
+		a.mw.SetVisible(true)
+		win.ShowWindow(h, win.SW_RESTORE)
+		a.applyTopMost()
+		win.SetForegroundWindow(h)
 		return
 	}
 	if a.cur == nil {

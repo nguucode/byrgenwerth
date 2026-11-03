@@ -41,7 +41,7 @@ Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, W
 - **Game**: the game you are playing. Each game has its own count, templates, keywords and boss stats.
 - **Số lần chết** (deaths): the big red number, with **+1**, **−1** and **Reset** buttons.
 - **4 tabs**: Nhận diện (detection), Hiển thị (display), Cài đặt (settings), Boss.
-- **Cửa sổ app luôn nằm trên**: keep the app window always on top.
+- **Cửa sổ app luôn nằm trên**: keep the app window always on top. When a full-screen game (Borderless included) comes to the front, the app window minimizes itself; F7 brings it back.
 - The last line is the **status**: what the app just did, or any error.
 
 ## 3. Add a game
@@ -201,7 +201,7 @@ It cannot be undone. To keep your counts, copy `DeathCounterData` somewhere firs
 | F10 | −1 (fix a wrong count). |
 | F11 | Save a template only, no count. |
 | F8 | Toggle automatic detection. |
-| F7 | Hide/show the app window. Detection, overlay and OBS keep running. |
+| F7 | Hide/show the app window (also brings it back after it minimized for a game). Detection, overlay and OBS keep running. |
 
 Hotkeys work while in game; the game won't receive these keys.
 To change them, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and restart the app.
@@ -245,6 +245,7 @@ The game is in exclusive fullscreen. Switch to Borderless.
 3. Add that language's death text to **Từ khóa**. Accents don't matter: "BẠN ĐÃ CHẾT" also matches "BAN DA CHET". Presets of games that show "YOU DIED" already include the Vietnamese fan translation "BẠN ĐÃ CHẾT".
 
 ### Boss not detected
+- **Thống kê** only fills up when you die: a boss is listed after its first kill, not when its bar appears.
 - Watch **Đang đánh** during the fight.
 - Empty: the name may be outside the automatic bands or too small. Use **Khoanh vùng...** in the Boss tab.
 - Wrong name: draw a tighter region and rename it in **Thống kê**.
