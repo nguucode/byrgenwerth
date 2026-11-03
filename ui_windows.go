@@ -1350,6 +1350,12 @@ func (a *App) refreshProfileList(sel int) {
 }
 
 func (a *App) loadProfile(p *Profile) {
+	if i := a.presetIndex(p.Preset); i >= 0 {
+		if k := UpgradeKeywords(p.Keywords, a.presets[i].Keywords); len(k) != len(p.Keywords) {
+			p.Keywords = k
+			a.store.SaveProfile(p)
+		}
+	}
 	a.cur = p
 	a.det = NewDetector(p.Threshold, time.Duration(p.CooldownSec*float64(time.Second)))
 	a.suppress = true

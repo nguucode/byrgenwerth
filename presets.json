@@ -2,7 +2,8 @@
  {
   "game": "Elden Ring",
   "keywords": [
-   "YOU DIED"
+   "YOU DIED",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "ok",
   "note": ""
@@ -11,7 +12,8 @@
   "game": "Elden Ring Nightreign",
   "keywords": [
    "YOU DIED",
-   "DEFEAT"
+   "DEFEAT",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "ok",
   "note": "\"Defeat\" là màn thua cả đội; chưa xác minh chữ hoa/thường."
@@ -19,7 +21,8 @@
  {
   "game": "Dark Souls III",
   "keywords": [
-   "YOU DIED"
+   "YOU DIED",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "ok",
   "note": ""
@@ -27,7 +30,8 @@
  {
   "game": "Dark Souls Remastered",
   "keywords": [
-   "YOU DIED"
+   "YOU DIED",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "ok",
   "note": ""
@@ -50,7 +54,8 @@
  {
   "game": "Bloodborne",
   "keywords": [
-   "YOU DIED"
+   "YOU DIED",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "ok",
   "note": ""
@@ -58,7 +63,8 @@
  {
   "game": "Demon's Souls (2020)",
   "keywords": [
-   "YOU DIED"
+   "YOU DIED",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "ok",
   "note": ""
@@ -99,7 +105,8 @@
  {
   "game": "Stellar Blade",
   "keywords": [
-   "YOU DIED"
+   "YOU DIED",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "ok",
   "note": ""
@@ -387,7 +394,8 @@
  {
   "game": "Resident Evil 2 (2019 remake)",
   "keywords": [
-   "YOU DIED"
+   "YOU DIED",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "stylized",
   "note": "Chữ YOU DIED kiểu máu, OCR có thể đọc trượt."
@@ -523,7 +531,8 @@
   "game": "Minecraft",
   "keywords": [
    "YOU DIED",
-   "GAME OVER"
+   "GAME OVER",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "ok",
   "note": "GAME OVER là chế độ Hardcore."
@@ -621,7 +630,8 @@
  {
   "game": "Cuphead",
   "keywords": [
-   "YOU DIED"
+   "YOU DIED",
+   "BẠN ĐÃ CHẾT"
   ],
   "ocr": "stylized",
   "note": "Chữ kiểu hoạt hình thập niên 30; OCR có thể đọc trượt."

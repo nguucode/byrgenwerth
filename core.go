@@ -273,6 +273,8 @@ var DefaultKeywords = []string{
 	// verified in the top-100 research
 	"DESYNCHRONIZED", "SQUAD ELIMINATED", "KILLED IN ACTION",
 	"YOU WERE SLAIN *", "YOU WERE KILLED BY *", "ELIMINATED BY *",
+	// Vietnamese fan translations of "YOU DIED"
+	"BẠN ĐÃ CHẾT",
 }
 
 func DefaultConfig() Config {
@@ -398,6 +400,7 @@ func (s *Store) LoadConfig() Config {
 	if c.ServerPort < 1024 || c.ServerPort > 65000 {
 		c.ServerPort = d.ServerPort
 	}
+	c.Keywords = UpgradeKeywords(c.Keywords, DefaultKeywords)
 	if len(c.Keywords) == 0 {
 		c.Keywords = append([]string(nil), DefaultKeywords...)
 	}
@@ -825,6 +828,34 @@ func isCJK(s string) bool {
 
 func compact(s string) string { return strings.ReplaceAll(NormalizeText(s), " ", "") }
 
+// latinFold maps accented capitals (all Vietnamese ones and most European ones)
+// to their base letter, so "BẠN ĐÃ CHẾT" also matches OCR output that lost marks.
+var latinFold = func() map[rune]rune {
+	from := []rune("ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÄÅÈÉẸẺẼÊỀẾỆỂỄËÌÍỊỈĨÎÏÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÖÙÚỤỦŨƯỪỨỰỬỮÛÜỲÝỴỶỸŸĐÇÑ")
+	to := []rune("AAAAAAAAAAAAAAAAAAAEEEEEEEEEEEEIIIIIIIOOOOOOOOOOOOOOOOOOUUUUUUUUUUUUUYYYYYYDCN")
+	m := make(map[rune]rune, len(from))
+	for i, r := range from {
+		m[r] = to[i]
+	}
+	return m
+}()
+
+// matchText is NormalizeText without accents on Latin letters, for keyword matching.
+func matchText(s string) string {
+	var b strings.Builder
+	prev := rune(0)
+	for _, r := range NormalizeText(s) {
+		if f, ok := latinFold[r]; ok {
+			r = f
+		} else if unicode.Is(unicode.Mn, r) && prev >= 'A' && prev <= 'Z' {
+			continue // combining accent on a Latin letter
+		}
+		b.WriteRune(r)
+		prev = r
+	}
+	return b.String()
+}
+
 func editDistance(a, b string) int {
 	ra, rb := []rune(a), []rune(b)
 	prev := make([]int, len(rb)+1)
@@ -875,7 +906,7 @@ func MatchDeath(lines []OcrLine, keywords []string, minHeight float64) (OcrMatch
 		var words []string
 		var boxes []OcrWord
 		for _, w := range ln.Words {
-			for _, part := range strings.Fields(NormalizeText(w.Text)) {
+			for _, part := range strings.Fields(matchText(w.Text)) {
 				words = append(words, part)
 				boxes = append(boxes, w)
 			}
@@ -908,7 +939,7 @@ func MatchDeath(lines []OcrLine, keywords []string, minHeight float64) (OcrMatch
 				continue
 			}
 			prefix := strings.HasSuffix(strings.TrimSpace(kw), "*")
-			kws := strings.Fields(NormalizeText(strings.TrimSuffix(strings.TrimSpace(kw), "*")))
+			kws := strings.Fields(matchText(strings.TrimSuffix(strings.TrimSpace(kw), "*")))
 			if len(kws) == 0 || len(kws) > len(words) {
 				continue
 			}
@@ -1146,6 +1177,24 @@ func MustHex(s string, def RGB) RGB {
 }
 
 // EffectiveKeywords returns the profile's own keywords, or the global list.
+// UpgradeKeywords brings a saved copy of a built-in list up to date. A list the
+// user added their own keywords to is left alone.
+func UpgradeKeywords(have, latest []string) []string {
+	known := make(map[string]bool, len(latest))
+	for _, k := range latest {
+		known[k] = true
+	}
+	for _, k := range have {
+		if !known[k] {
+			return have
+		}
+	}
+	if len(have) == 0 || len(have) == len(latest) {
+		return have
+	}
+	return append([]string(nil), latest...)
+}
+
 func EffectiveKeywords(p *Profile, global []string) []string {
 	if p != nil && len(p.Keywords) > 0 {
 		return p.Keywords

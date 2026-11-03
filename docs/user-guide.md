@@ -242,7 +242,7 @@ The game is in exclusive fullscreen. Switch to Borderless.
 ### OCR cannot read a game in Chinese/Japanese/Vietnamese
 1. Windows *Settings → Time & language → Language & region → Add a language*, add the game's language.
 2. Restart the app and pick it in **Ngôn ngữ game** (Nhận diện tab).
-3. Add that language's death text to **Từ khóa**.
+3. Add that language's death text to **Từ khóa**. Accents don't matter: "BẠN ĐÃ CHẾT" also matches "BAN DA CHET". Presets of games that show "YOU DIED" already include the Vietnamese fan translation "BẠN ĐÃ CHẾT".
 
 ### Boss not detected
 - Watch **Đang đánh** during the fight.

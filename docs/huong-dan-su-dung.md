@@ -240,7 +240,7 @@ Game đang ở Exclusive Fullscreen. Chuyển sang Borderless.
 ### OCR không đọc được game tiếng Trung/Nhật/Việt
 1. Windows *Settings → Time & language → Language & region → Add a language*, thêm ngôn ngữ của game.
 2. Mở lại app, chọn ngôn ngữ đó ở **Ngôn ngữ game** (tab Nhận diện).
-3. Thêm từ khóa màn chết bằng ngôn ngữ đó vào ô **Từ khóa**.
+3. Thêm từ khóa màn chết bằng ngôn ngữ đó vào ô **Từ khóa**. Không cần đúng dấu: "BẠN ĐÃ CHẾT" khớp cả "BAN DA CHET". Mẫu của các game hiện "YOU DIED" đã có sẵn "BẠN ĐÃ CHẾT" cho bản Việt hóa.
 
 ### Boss không được ghi nhận
 - Xem dòng **Đang đánh** trong lúc đánh boss.

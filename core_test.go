@@ -455,6 +455,9 @@ func TestMatchDeathPositive(t *testing.T) {
 		line("Wasted", 0.42, 0.5, 0.08),
 		line("YOU DIED.", 0.4, 0.45, 0.06),
 		line("- DEFEATED -", 0.4, 0.45, 0.05),
+		line("BẠN ĐÃ CHẾT", 0.4, 0.45, 0.06), // Vietnamese fan translation, Vietnamese OCR
+		line("BAN DA CHET", 0.4, 0.45, 0.06), // same screen, English OCR drops the marks
+		line("BẠN ĐA CHÊT", 0.4, 0.45, 0.06), // marks half-read
 	}
 	for _, c := range cases {
 		if m, ok := MatchDeath([]OcrLine{c}, kw, 0.025); !ok {
@@ -462,6 +465,19 @@ func TestMatchDeathPositive(t *testing.T) {
 		} else if m.Box.W <= 0 || m.Height <= 0 {
 			t.Errorf("bad box for %q: %+v", c.Text, m)
 		}
+	}
+}
+
+func TestUpgradeKeywords(t *testing.T) {
+	latest := []string{"YOU DIED", "BẠN ĐÃ CHẾT"}
+	if k := UpgradeKeywords([]string{"YOU DIED"}, latest); len(k) != 2 {
+		t.Fatalf("old preset copy should be upgraded: %v", k)
+	}
+	if k := UpgradeKeywords([]string{"YOU DIED", "MY TEXT"}, latest); len(k) != 2 || k[1] != "MY TEXT" {
+		t.Fatalf("custom list must be kept: %v", k)
+	}
+	if k := UpgradeKeywords(nil, latest); k != nil {
+		t.Fatal("empty means generic, keep it empty")
 	}
 }
 
