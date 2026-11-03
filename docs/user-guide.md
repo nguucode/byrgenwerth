@@ -43,6 +43,22 @@ Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, W
 2. If the name matches one of the 100 presets (close is fine: "elden ring", "wuchang"), its death keywords and boss-name region are loaded automatically.
 3. **Đổi tên** (rename) / **Xóa** (delete). Deleting a game also deletes its count and templates.
 
+### Supported games
+
+Any Windows game can be counted: if OCR doesn't catch the death screen, press **F9** once to teach a template, or use [the health-bar mode](#games-without-a-death-screen-fade-to-black-reload-checkpoint). What differs between games is how much works out of the box. "Verified" below means the death text was found in wikis and screenshots ([sources](death-screens-top100.csv)); not every game has been tested in the app yet.
+
+**Counted automatically, readable text (27):** Elden Ring, Elden Ring Nightreign, Dark Souls III, Dark Souls Remastered, Bloodborne, Demon's Souls (2020), Wuchang: Fallen Feathers, Stellar Blade, The First Berserker: Khazan, Diablo IV, The Witcher 3: Wild Hunt, Fortnite, Apex Legends, PUBG: Battlegrounds, Overwatch 2, Escape from Tarkov, Team Fortress 2, Rust, DayZ, Left 4 Dead 2, Resident Evil 4 (2023 remake), Assassin's Creed Shadows, Metal Gear Solid Delta: Snake Eater, Minecraft, Subnautica, Lethal Company, Risk of Rain 2.
+Some only count part of the deaths: Apex Legends and Risk of Rain 2 only when the whole squad or run is lost; PUBG and Escape from Tarkov on the end-of-match screen, not the moment you die; Assassin's Creed Shadows also counts failed missions (DESYNCHRONIZED).
+
+**Counted automatically, stylized text: OCR may miss it, press F9 once (10):** Sekiro: Shadows Die Twice (needs Japanese OCR), Hunt: Showdown 1896, Grand Theft Auto V, Red Dead Redemption 2, Resident Evil 2 (2019 remake), Hades, Terraria, Cuphead, Balatro, Fall Guys. Balatro and Fall Guys count lost runs and eliminations, not deaths.
+
+**Preset but death text not verified, generic keywords (54):** Lies of P, Black Myth: Wukong, Lords of the Fallen (2023), Nioh 2, Mortal Shell, Hollow Knight: Silksong, Monster Hunter Wilds, Monster Hunter: World, Dragon's Dogma 2, Baldur's Gate 3, Path of Exile 2, Cyberpunk 2077, Counter-Strike 2, Valorant, Call of Duty: Warzone, Call of Duty: Black Ops 6, Call of Duty: Black Ops 7, Battlefield 6, Marvel Rivals, Tom Clancy's Rainbow Six Siege, ARC Raiders, Helldivers 2, The Finals, Destiny 2, Deadlock, Delta Force, Deep Rock Galactic, Resident Evil Village, Silent Hill 2 (2024 remake), Dead Space (2023 remake), The Last of Us Part II, God of War Ragnarök, Ghost of Tsushima, Ghost of Yōtei, Marvel's Spider-Man 2, Horizon Forbidden West, Assassin's Creed Valhalla, Kingdom Come: Deliverance II, Death Stranding 2: On the Beach, Ninja Gaiden 2 Black, Devil May Cry 5, Hades II, Dead Cells, The Binding of Isaac: Rebirth, Valheim, 7 Days to Die, Project Zomboid, Palworld, Enshrouded, R.E.P.O., PEAK, Vampire Survivors, Slay the Spire, League of Legends.
+These may count on their own if the death screen matches a generic keyword; expect to press F9 once.
+
+**No death text, or text too small: F9 templates or health-bar mode (9):** Hollow Knight, The Last of Us Part I, Phasmophobia, Celeste, Super Meat Boy, Geometry Dash (no death text); Don't Starve Together, Dead by Daylight, Dota 2 (text too small).
+
+For every game: Windows only, and the game must run **Borderless** or **Windowed**. Console games (e.g. Bloodborne, Demon's Souls) only work when the picture is shown in a window on the PC, such as PS Remote Play or a capture-card preview.
+
 ## 4. Nhận diện tab (detection)
 
 ### How deaths are detected

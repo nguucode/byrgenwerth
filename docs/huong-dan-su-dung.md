@@ -41,6 +41,22 @@ Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclu
 2. Nếu tên trùng một trong 100 game có sẵn mẫu (gõ gần đúng là được, ví dụ "elden ring", "wuchang"), app tự nạp từ khóa màn chết và vùng tên boss của game đó.
 3. **Đổi tên** / **Xóa** để quản lý. Xóa game sẽ xóa luôn số đếm và ảnh mẫu của game đó.
 
+### Game được hỗ trợ
+
+Game nào chạy trên Windows cũng đếm được: OCR không bắt được màn chết thì bấm **F9** một lần để dạy ảnh mẫu, hoặc dùng [chế độ thanh máu](#game-không-có-màn-chết-màn-hình-tối-rồi-về-điểm-lưu). Khác nhau giữa các game là app tự làm được bao nhiêu. "Đã xác minh" dưới đây nghĩa là đã tìm được chữ màn chết qua wiki và ảnh chụp ([nguồn](death-screens-top100.csv)); chưa phải game nào cũng đã được chạy thử trong app.
+
+**Tự đếm, chữ dễ đọc (27):** Elden Ring, Elden Ring Nightreign, Dark Souls III, Dark Souls Remastered, Bloodborne, Demon's Souls (2020), Wuchang: Fallen Feathers, Stellar Blade, The First Berserker: Khazan, Diablo IV, The Witcher 3: Wild Hunt, Fortnite, Apex Legends, PUBG: Battlegrounds, Overwatch 2, Escape from Tarkov, Team Fortress 2, Rust, DayZ, Left 4 Dead 2, Resident Evil 4 (2023 remake), Assassin's Creed Shadows, Metal Gear Solid Delta: Snake Eater, Minecraft, Subnautica, Lethal Company, Risk of Rain 2.
+Vài game chỉ đếm được một phần: Apex Legends và Risk of Rain 2 chỉ đếm khi cả đội hoặc cả run thua; PUBG và Escape from Tarkov đếm ở màn tổng kết, không phải ngay lúc chết; Assassin's Creed Shadows đếm cả khi hỏng nhiệm vụ (DESYNCHRONIZED).
+
+**Tự đếm nhưng chữ cách điệu: OCR có thể trượt, bấm F9 một lần (10):** Sekiro: Shadows Die Twice (cần OCR tiếng Nhật), Hunt: Showdown 1896, Grand Theft Auto V, Red Dead Redemption 2, Resident Evil 2 (2019 remake), Hades, Terraria, Cuphead, Balatro, Fall Guys. Balatro và Fall Guys đếm lần thua run hoặc bị loại, không phải chết.
+
+**Có mẫu nhưng chưa xác minh chữ chết, dùng từ khóa chung (54):** Lies of P, Black Myth: Wukong, Lords of the Fallen (2023), Nioh 2, Mortal Shell, Hollow Knight: Silksong, Monster Hunter Wilds, Monster Hunter: World, Dragon's Dogma 2, Baldur's Gate 3, Path of Exile 2, Cyberpunk 2077, Counter-Strike 2, Valorant, Call of Duty: Warzone, Call of Duty: Black Ops 6, Call of Duty: Black Ops 7, Battlefield 6, Marvel Rivals, Tom Clancy's Rainbow Six Siege, ARC Raiders, Helldivers 2, The Finals, Destiny 2, Deadlock, Delta Force, Deep Rock Galactic, Resident Evil Village, Silent Hill 2 (2024 remake), Dead Space (2023 remake), The Last of Us Part II, God of War Ragnarök, Ghost of Tsushima, Ghost of Yōtei, Marvel's Spider-Man 2, Horizon Forbidden West, Assassin's Creed Valhalla, Kingdom Come: Deliverance II, Death Stranding 2: On the Beach, Ninja Gaiden 2 Black, Devil May Cry 5, Hades II, Dead Cells, The Binding of Isaac: Rebirth, Valheim, 7 Days to Die, Project Zomboid, Palworld, Enshrouded, R.E.P.O., PEAK, Vampire Survivors, Slay the Spire, League of Legends.
+Nhóm này có thể tự đếm nếu màn chết trùng từ khóa chung; thường sẽ cần bấm F9 một lần.
+
+**Không có chữ chết hoặc chữ quá nhỏ: dùng F9 + ảnh mẫu hoặc chế độ thanh máu (9):** Hollow Knight, The Last of Us Part I, Phasmophobia, Celeste, Super Meat Boy, Geometry Dash (không có chữ chết); Don't Starve Together, Dead by Daylight, Dota 2 (chữ quá nhỏ).
+
+Với mọi game: chỉ chạy trên Windows, game phải để **Borderless** hoặc **Windowed**. Game console (ví dụ Bloodborne, Demon's Souls) chỉ đếm được khi hình hiện trong một cửa sổ trên PC, như PS Remote Play hoặc cửa sổ xem trước của capture card.
+
 ## 4. Tab Nhận diện: tự đếm số lần chết
 
 ### Cách app nhận ra bạn vừa chết

@@ -1,6 +1,25 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"strings"
+	"testing"
+)
+
+// The supported-games list in both guides must name every preset.
+func TestGuidesListAllPresets(t *testing.T) {
+	for _, f := range []string{"docs/user-guide.md", "docs/huong-dan-su-dung.md"} {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range LoadPresets() {
+			if !strings.Contains(string(b), p.Game) {
+				t.Errorf("%s does not list %q", f, p.Game)
+			}
+		}
+	}
+}
 
 func TestFindPreset(t *testing.T) {
 	ps := []Preset{
