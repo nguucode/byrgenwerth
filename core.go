@@ -342,6 +342,38 @@ func (s *Store) TemplatePath(p *Profile, name string) string {
 }
 func (s *Store) ObsPath() string     { return filepath.Join(s.Dir, "obs_deaths.txt") }
 func (s *Store) HistoryPath() string { return filepath.Join(s.Dir, "history.csv") }
+func (s *Store) MissLogPath() string { return filepath.Join(s.Dir, "ocr-misses.log") }
+
+// OcrFrame is what OCR read at one moment, kept to explain a missed death.
+type OcrFrame struct {
+	At    time.Time
+	Lines []string
+}
+
+// AppendMissLog records what OCR read before a death the app did not count on
+// its own (the user pressed +1), so the keywords can be fixed later.
+// ponytail: append-only, grows ~1 KB per miss; trim it if that ever matters.
+func (s *Store) AppendMissLog(game string, frames []OcrFrame, now time.Time) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "== %s  %s\n", now.Format("2006-01-02 15:04:05"), game)
+	if len(frames) == 0 {
+		b.WriteString("(OCR did not run: detection or OCR is off)\n")
+	}
+	for _, f := range frames {
+		text := strings.Join(f.Lines, " | ")
+		if text == "" {
+			text = "(no text)"
+		}
+		fmt.Fprintf(&b, "%s  %s\n", f.At.Format("15:04:05.0"), text)
+	}
+	f, err := os.OpenFile(s.MissLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(b.String())
+	return err
+}
 
 // writeAtomic writes via temp file + rename so OBS never reads a half-written file.
 func writeAtomic(path string, data []byte) error {
@@ -1158,7 +1190,7 @@ func LegacyDataDirs(appData string) []string {
 }
 
 // appDataFiles are the entries Death Counter writes into a data folder.
-var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", dataPointerFile}
+var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", "ocr-misses.log", dataPointerFile}
 
 // RemoveAppData deletes Death Counter's own files from dir and then dir itself if
 // it is left empty, so a folder shared with other files keeps them.

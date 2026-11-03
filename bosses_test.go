@@ -183,6 +183,13 @@ func fakeMeasure(text string, px int, bold bool) (int, int) {
 	return w, px * 13 / 10
 }
 
+func TestWithoutNames(t *testing.T) {
+	got := WithoutNames([]string{"Deaths: 3", "Asylum Demon", "Dark Souls 1"}, []string{"Dark Souls 1", "Deaths", "Deaths: 0"})
+	if len(got) != 1 || got[0] != "Asylum Demon" {
+		t.Fatalf("own labels must be dropped: %v", got)
+	}
+}
+
 func TestLayoutSplits(t *testing.T) {
 	p := &Profile{Bosses: []BossStat{{"Margit, the Fell Omen", 23}, {"Godrick the Grafted", 11}, {"Rennala", 7}, {"Starscourge Radahn", 4}}}
 	st := SplitsState{Title: "Elden Ring", Rows: BuildSplits(p, "Starscourge Radahn", 3), Total: 58}

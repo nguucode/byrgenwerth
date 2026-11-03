@@ -159,6 +159,25 @@ func BossCandidates(lines []OcrLine, zones []ROI, deathKeywords []string) []stri
 	return out
 }
 
+// WithoutNames drops candidates that are really the app's own labels (the
+// counter overlay, the boss panel title), e.g. when OBS's preview shows them.
+func WithoutNames(cands, own []string) []string {
+	out := cands[:0:0]
+	for _, c := range cands {
+		mine := false
+		for _, o := range own {
+			if strings.TrimSpace(o) != "" && sameBoss(c, o) {
+				mine = true
+				break
+			}
+		}
+		if !mine {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
 type bossSighting struct {
 	text  string
 	count int

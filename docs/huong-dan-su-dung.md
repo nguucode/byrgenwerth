@@ -215,12 +215,14 @@ Trong thư mục `DeathCounterData` cạnh file `DeathCounter.exe` (nút **Mở*
 | `profiles\<game>\templates\` | Ảnh mẫu màn chết. |
 | `history.csv` | Nhật ký từng lần +1/−1, mở bằng Excel được. |
 | `obs_deaths.txt` | File text cho OBS (nếu bật). |
+| `ocr-misses.log` | Chữ OCR đọc được trong 10 giây trước mỗi lần bấm F9 +1, tức là những lần app bỏ sót. Gửi kèm khi báo lỗi. |
 
 Sao lưu: copy cả thư mục này.
 
 ## 10. Xử lý sự cố
 
 ### Chết mà không tự đếm
+- Bấm F9 ngay: app cộng 1 và ghi những gì OCR đọc được vào `ocr-misses.log` trong thư mục dữ liệu. File này cho biết vì sao bị sót.
 - Xem **Trạng thái OCR** lúc màn chết hiện.
   - "Không thấy chữ" hoặc đọc ra chữ lạ: chữ cách điệu. Dùng F9 + Khoanh vùng (mục 4).
   - Thấy đúng chữ nhưng "không phải từ khóa": thêm chữ đó vào ô **Từ khóa**.

@@ -677,6 +677,17 @@ func TestLegacyDataDirsAndRemove(t *testing.T) {
 	}
 }
 
+func TestAppendMissLog(t *testing.T) {
+	s := &Store{Dir: t.TempDir()}
+	now := time.Date(2026, 11, 3, 15, 4, 5, 0, time.UTC)
+	s.AppendMissLog("Dark Souls", []OcrFrame{{At: now, Lines: []string{"Y0U DlED (5.0%)"}}}, now)
+	s.AppendMissLog("Dark Souls", nil, now)
+	b, _ := os.ReadFile(s.MissLogPath())
+	if !strings.Contains(string(b), "Y0U DlED (5.0%)") || strings.Count(string(b), "== ") != 2 {
+		t.Fatalf("miss log:\n%s", b)
+	}
+}
+
 func TestDropLinesInside(t *testing.T) {
 	own := line("Deaths: 0", 0.9, 0.02, 0.014)    // the app's overlay, top-right
 	boss := line("Asylum Demon", 0.1, 0.8, 0.025) // the game's boss label

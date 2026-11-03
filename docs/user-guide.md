@@ -217,12 +217,14 @@ In `DeathCounterData` next to `DeathCounter.exe` (button **Mở** in the Cài đ
 | `profiles\<game>\templates\` | Death-screen templates. |
 | `history.csv` | Log of every +1/−1, opens in Excel. |
 | `obs_deaths.txt` | Text file for OBS (if enabled). |
+| `ocr-misses.log` | What OCR read in the 10 seconds before each F9 +1, i.e. deaths the app missed. Send it with a bug report. |
 
 Back up by copying the whole folder.
 
 ## 10. Troubleshooting
 
 ### A death is not counted
+- Press F9 right away: it counts the death and writes what OCR read to `ocr-misses.log` in the data folder. That file shows why the death was missed.
 - Check **Trạng thái OCR** during the death screen.
   - Nothing or garbage read: stylized text. Use F9 + draw region (section 4).
   - Correct text but "không phải từ khóa" (not a keyword): add it to **Từ khóa**.

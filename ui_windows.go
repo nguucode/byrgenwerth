@@ -73,7 +73,8 @@ type App struct {
 	migrated     bool
 	dirWarn      string
 	uninstalling bool
-	lastFg       win.HWND // foreground window last seen by autoHideForGame
+	lastFg       win.HWND   // foreground window last seen by autoHideForGame
+	recentOcr    []OcrFrame // the last ~10 s of OCR, written to the miss log on a manual +1
 
 	hk       *HotkeyManager
 	hkErrors []string
@@ -724,6 +725,22 @@ func (a *App) onOcrUnavailable(msg string) {
 	a.updateLoop()
 }
 
+// rememberOcr keeps the last 10 seconds of OCR text with each line's height.
+func (a *App) rememberOcr(lines []OcrLine, now time.Time) {
+	var texts []string
+	for _, ln := range lines {
+		h := 0.0
+		for _, w := range ln.Words {
+			h = max(h, w.H)
+		}
+		texts = append(texts, fmt.Sprintf("%s (%.1f%%)", ln.Text, h*100))
+	}
+	a.recentOcr = append(a.recentOcr, OcrFrame{At: now, Lines: texts})
+	for len(a.recentOcr) > 0 && now.Sub(a.recentOcr[0].At) > 10*time.Second {
+		a.recentOcr = a.recentOcr[1:]
+	}
+}
+
 func describeOcr(lines []OcrLine, m OcrMatch, hit bool) string {
 	if hit {
 		return fmt.Sprintf("Thấy \"%s\" (cao %.1f%%) → KHỚP", m.Line, m.Height*100)
@@ -782,6 +799,9 @@ func (a *App) onFrame(fr frameResult) {
 	hit := false
 	if fr.ranOcr {
 		fr.lines = DropLinesInside(fr.lines, a.ownRects())
+		if fr.ocrErr == nil {
+			a.rememberOcr(fr.lines, now)
+		}
 		if fr.ocrErr != nil {
 			a.ocrLbl.SetText("Lỗi: " + fr.ocrErr.Error())
 		} else {
@@ -791,7 +811,8 @@ func (a *App) onFrame(fr frameResult) {
 				a.ocrLbl.SetText(describeOcr(fr.lines, m, hit))
 			}
 			if a.cur.BossTrack {
-				a.tracker.Observe(BossCandidates(fr.lines, a.bossZones(), kw), now)
+				own := []string{a.cur.Name, "Deaths", FormatObs(a.cfg.ObsFormat, a.cur.Name, a.cur.Deaths)}
+				a.tracker.Observe(WithoutNames(BossCandidates(fr.lines, a.bossZones(), kw), own), now)
 				b, _ := a.tracker.Current(now)
 				if b != a.curBoss {
 					a.curBoss = b
@@ -985,6 +1006,7 @@ func (a *App) onHotkey(act HotkeyAction) {
 		}
 		img, err := CaptureMonitor(a.currentMonitor())
 		a.addDeath(1, "hotkey")
+		a.store.AppendMissLog(a.cur.Name, a.recentOcr, now)
 		a.det.MarkManual(now)
 		if err != nil {
 			a.setStatus("Đã +1, nhưng không chụp được màn hình: " + err.Error())
