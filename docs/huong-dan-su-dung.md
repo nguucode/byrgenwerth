@@ -215,6 +215,7 @@ Trong thư mục `DeathCounterData` cạnh file `DeathCounter.exe` (nút **Mở*
 | `profiles\<game>\templates\` | Ảnh mẫu màn chết. |
 | `history.csv` | Nhật ký từng lần +1/−1, mở bằng Excel được. |
 | `obs_deaths.txt` | File text cho OBS (nếu bật). |
+| `ocr-debug.log` | Mọi lần OCR đọc (chữ, vị trí, cỡ chữ), mọi lần đếm và mọi lần đổi boss. Đầy 4 MB thì chuyển sang `ocr-debug.old.log`. Gửi kèm khi báo lỗi. |
 | `ocr-misses.log` | Chữ OCR đọc được trong 10 giây trước mỗi lần bấm F9 +1, tức là những lần app bỏ sót. Gửi kèm khi báo lỗi. |
 
 Sao lưu: copy cả thư mục này.

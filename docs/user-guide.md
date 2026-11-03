@@ -217,6 +217,7 @@ In `DeathCounterData` next to `DeathCounter.exe` (button **Mở** in the Cài đ
 | `profiles\<game>\templates\` | Death-screen templates. |
 | `history.csv` | Log of every +1/−1, opens in Excel. |
 | `obs_deaths.txt` | Text file for OBS (if enabled). |
+| `ocr-debug.log` | Every OCR read (text, position, height), every count and every boss change. Moved to `ocr-debug.old.log` at 4 MB. Send it with a bug report. |
 | `ocr-misses.log` | What OCR read in the 10 seconds before each F9 +1, i.e. deaths the app missed. Send it with a bug report. |
 
 Back up by copying the whole folder.

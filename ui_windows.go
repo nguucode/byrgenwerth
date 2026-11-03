@@ -725,16 +725,14 @@ func (a *App) onOcrUnavailable(msg string) {
 	a.updateLoop()
 }
 
-// rememberOcr keeps the last 10 seconds of OCR text with each line's height.
+// rememberOcr writes the frame to ocr-debug.log and keeps the last 10 seconds
+// for the miss log.
 func (a *App) rememberOcr(lines []OcrLine, now time.Time) {
 	var texts []string
 	for _, ln := range lines {
-		h := 0.0
-		for _, w := range ln.Words {
-			h = max(h, w.H)
-		}
-		texts = append(texts, fmt.Sprintf("%s (%.1f%%)", ln.Text, h*100))
+		texts = append(texts, DescribeLine(ln))
 	}
+	a.store.AppendDebugLog("OCR  "+strings.Join(texts, " | "), now)
 	a.recentOcr = append(a.recentOcr, OcrFrame{At: now, Lines: texts})
 	for len(a.recentOcr) > 0 && now.Sub(a.recentOcr[0].At) > 10*time.Second {
 		a.recentOcr = a.recentOcr[1:]
@@ -816,6 +814,7 @@ func (a *App) onFrame(fr frameResult) {
 				b, _ := a.tracker.Current(now)
 				if b != a.curBoss {
 					a.curBoss = b
+					a.store.AppendDebugLog("BOSS "+b, now)
 					a.refreshBosses()
 				}
 			}
@@ -825,7 +824,13 @@ func (a *App) onFrame(fr frameResult) {
 	if hit {
 		eff = 1
 	}
-	if !a.det.Feed(eff, now) {
+	counted := false
+	if hit && StrongKeyword(m.Keyword) {
+		counted = a.det.FeedStrong(now)
+	} else {
+		counted = a.det.Feed(eff, now)
+	}
+	if !counted {
 		return
 	}
 	a.addDeath(1, "auto")
@@ -1038,6 +1043,7 @@ func (a *App) addDeath(delta int, source string) {
 		return
 	}
 	a.cur.Deaths += delta
+	a.store.AppendDebugLog(fmt.Sprintf("COUNT %+d %s (total %d)", delta, source, a.cur.Deaths), time.Now())
 	if delta > 0 && a.cfg.Sound {
 		a.playSound()
 	}

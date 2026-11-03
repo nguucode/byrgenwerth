@@ -142,8 +142,10 @@ type Detector struct {
 	Threshold    float64       // 0..1
 	Cooldown     time.Duration // min time between two counts
 	ConsecNeeded int           // frames above threshold needed to count
+	Window       time.Duration // those frames must fall within this time; misses in between are fine
 	RearmMargin  float64       // must drop below Threshold-RearmMargin to rearm
 
+	lastAbove time.Time
 	consec    int
 	below     int
 	disarmed  bool
@@ -152,15 +154,20 @@ type Detector struct {
 }
 
 func NewDetector(threshold float64, cooldown time.Duration) *Detector {
-	return &Detector{Threshold: threshold, Cooldown: cooldown, ConsecNeeded: 2, RearmMargin: 0.07}
+	return &Detector{Threshold: threshold, Cooldown: cooldown, ConsecNeeded: 2, Window: 4 * time.Second, RearmMargin: 0.07}
 }
 
 // Feed returns true when a new death should be counted automatically.
+// A fading death banner is often read on one frame, missed on the next, read
+// again: frames above threshold count as long as they are within Window.
 func (d *Detector) Feed(sim float64, now time.Time) bool {
 	if sim >= d.Threshold {
-		d.consec++
-	} else {
-		d.consec = 0
+		if !d.lastAbove.IsZero() && now.Sub(d.lastAbove) <= d.Window {
+			d.consec++
+		} else {
+			d.consec = 1
+		}
+		d.lastAbove = now
 	}
 	if d.disarmed {
 		if sim < d.Threshold-d.RearmMargin {
@@ -183,6 +190,21 @@ func (d *Detector) Feed(sim float64, now time.Time) bool {
 		return true
 	}
 	return false
+}
+
+// FeedStrong is Feed for unambiguous evidence, such as a multi-word death
+// phrase read by OCR: one frame is enough.
+func (d *Detector) FeedStrong(now time.Time) bool {
+	d.consec = max(d.consec, d.ConsecNeeded-1)
+	d.lastAbove = now
+	return d.Feed(1, now)
+}
+
+// StrongKeyword reports whether an OCR hit on kw is enough on its own: a phrase
+// ("YOU DIED") or CJK text, not a single word like "DEAD" that menus also use.
+func StrongKeyword(kw string) bool {
+	kw = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(kw), "*"))
+	return strings.Contains(kw, " ") || isCJK(kw)
 }
 
 // MarkManual records a manual count so the same death screen isn't counted again.
@@ -340,9 +362,41 @@ func (s *Store) ProfileDir(id string) string { return filepath.Join(s.profilesDi
 func (s *Store) TemplatePath(p *Profile, name string) string {
 	return filepath.Join(s.ProfileDir(p.ID), "templates", name)
 }
-func (s *Store) ObsPath() string     { return filepath.Join(s.Dir, "obs_deaths.txt") }
-func (s *Store) HistoryPath() string { return filepath.Join(s.Dir, "history.csv") }
-func (s *Store) MissLogPath() string { return filepath.Join(s.Dir, "ocr-misses.log") }
+func (s *Store) ObsPath() string      { return filepath.Join(s.Dir, "obs_deaths.txt") }
+func (s *Store) HistoryPath() string  { return filepath.Join(s.Dir, "history.csv") }
+func (s *Store) MissLogPath() string  { return filepath.Join(s.Dir, "ocr-misses.log") }
+func (s *Store) DebugLogPath() string { return filepath.Join(s.Dir, "ocr-debug.log") }
+
+// debugLogMax is when ocr-debug.log is moved to ocr-debug.old.log and restarted
+// (~2-3 hours of play), so the two files stay under 8 MB together.
+const debugLogMax = 4 << 20
+
+// AppendDebugLog adds one timestamped line to ocr-debug.log: every OCR frame,
+// every count and every boss change, to see afterwards why OCR missed something.
+func (s *Store) AppendDebugLog(text string, now time.Time) error {
+	p := s.DebugLogPath()
+	if fi, err := os.Stat(p); err == nil && fi.Size() > debugLogMax {
+		os.Rename(p, filepath.Join(s.Dir, "ocr-debug.old.log"))
+	}
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = fmt.Fprintf(f, "%s  %s\n", now.Format("2006-01-02 15:04:05.0"), text)
+	return err
+}
+
+// DescribeLine is an OCR line with where it sits: left edge x, vertical center
+// y (0..1 of the screen) and text height h, e.g. "Asylum Demon [x.08 y.80 h2.4%]".
+func DescribeLine(ln OcrLine) string {
+	x0, y0, y1, h := 1.0, 1.0, 0.0, 0.0
+	for _, w := range ln.Words {
+		x0, y0 = math.Min(x0, w.X), math.Min(y0, w.Y)
+		y1, h = math.Max(y1, w.Y+w.H), math.Max(h, w.H)
+	}
+	return fmt.Sprintf("%s [x%.2f y%.2f h%.1f%%]", ln.Text, x0, (y0+y1)/2, h*100)
+}
 
 // OcrFrame is what OCR read at one moment, kept to explain a missed death.
 type OcrFrame struct {
@@ -1190,7 +1244,7 @@ func LegacyDataDirs(appData string) []string {
 }
 
 // appDataFiles are the entries Death Counter writes into a data folder.
-var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", "ocr-misses.log", dataPointerFile}
+var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", "ocr-misses.log", "ocr-debug.log", "ocr-debug.old.log", dataPointerFile}
 
 // RemoveAppData deletes Death Counter's own files from dir and then dir itself if
 // it is left empty, so a folder shared with other files keeps them.

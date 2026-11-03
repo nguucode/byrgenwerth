@@ -205,6 +205,34 @@ func TestDetectorCountsOncePerDeathScreen(t *testing.T) {
 	}
 }
 
+func TestDetectorFirstDeathFromOCR(t *testing.T) {
+	t0 := time.Unix(0, 0)
+	// No template yet: OCR reads the fading banner on one frame, misses the next.
+	d := NewDetector(0.8, 15*time.Second)
+	if !d.FeedStrong(t0) {
+		t.Fatal("a phrase like YOU DIED must count on its first read")
+	}
+	if d.FeedStrong(t0.Add(time.Second)) {
+		t.Fatal("same death screen must not count twice")
+	}
+	// Single-word hits need two reads, but a miss in between is fine.
+	d2 := NewDetector(0.8, 15*time.Second)
+	if d2.Feed(1, t0) || d2.Feed(0, t0.Add(time.Second)) {
+		t.Fatal("one read of a single word is not enough")
+	}
+	if !d2.Feed(1, t0.Add(2*time.Second)) {
+		t.Fatal("two reads within the window should count")
+	}
+	d3 := NewDetector(0.8, 15*time.Second)
+	d3.Feed(1, t0)
+	if d3.Feed(1, t0.Add(10*time.Second)) {
+		t.Fatal("reads far apart are not the same death screen")
+	}
+	if !StrongKeyword("YOU DIED") || !StrongKeyword("殒命") || StrongKeyword("DEAD") || !StrongKeyword("KILLED BY *") {
+		t.Fatal("StrongKeyword")
+	}
+}
+
 func TestDetectorFlickerAroundThreshold(t *testing.T) {
 	d := NewDetector(0.85, 2*time.Second)
 	t0 := time.Unix(0, 0)
@@ -685,6 +713,21 @@ func TestAppendMissLog(t *testing.T) {
 	b, _ := os.ReadFile(s.MissLogPath())
 	if !strings.Contains(string(b), "Y0U DlED (5.0%)") || strings.Count(string(b), "== ") != 2 {
 		t.Fatalf("miss log:\n%s", b)
+	}
+}
+
+func TestDebugLog(t *testing.T) {
+	s := &Store{Dir: t.TempDir()}
+	now := time.Date(2026, 11, 3, 15, 4, 5, 0, time.UTC)
+	s.AppendDebugLog("OCR  "+DescribeLine(line("Asylum Demon", 0.08, 0.79, 0.024)), now)
+	b, _ := os.ReadFile(s.DebugLogPath())
+	if !strings.Contains(string(b), "Asylum Demon [x0.08 y0.80 h2.4%]") {
+		t.Fatalf("debug log: %s", b)
+	}
+	os.WriteFile(s.DebugLogPath(), make([]byte, debugLogMax+1), 0o644)
+	s.AppendDebugLog("next", now)
+	if fi, _ := os.Stat(s.DebugLogPath()); fi.Size() > 100 {
+		t.Fatal("full log must be rotated")
 	}
 }
 
