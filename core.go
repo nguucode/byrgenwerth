@@ -141,11 +141,9 @@ func BestSimilarity(f Feature, templates []Feature) (float64, int) {
 type Detector struct {
 	Threshold    float64       // 0..1
 	Cooldown     time.Duration // min time between two counts
-	ConsecNeeded int           // frames above threshold needed to count
-	Window       time.Duration // those frames must fall within this time; misses in between are fine
+	ConsecNeeded int           // consecutive frames above threshold needed to count
 	RearmMargin  float64       // must drop below Threshold-RearmMargin to rearm
 
-	lastAbove time.Time
 	consec    int
 	below     int
 	disarmed  bool
@@ -154,20 +152,17 @@ type Detector struct {
 }
 
 func NewDetector(threshold float64, cooldown time.Duration) *Detector {
-	return &Detector{Threshold: threshold, Cooldown: cooldown, ConsecNeeded: 2, Window: 4 * time.Second, RearmMargin: 0.07}
+	return &Detector{Threshold: threshold, Cooldown: cooldown, ConsecNeeded: 2, RearmMargin: 0.07}
 }
 
 // Feed returns true when a new death should be counted automatically.
-// A fading death banner is often read on one frame, missed on the next, read
-// again: frames above threshold count as long as they are within Window.
+// Frames must be consecutive: a template that brushes the threshold now and
+// then during play (dark scenes) must not add up to a death.
 func (d *Detector) Feed(sim float64, now time.Time) bool {
 	if sim >= d.Threshold {
-		if !d.lastAbove.IsZero() && now.Sub(d.lastAbove) <= d.Window {
-			d.consec++
-		} else {
-			d.consec = 1
-		}
-		d.lastAbove = now
+		d.consec++
+	} else {
+		d.consec = 0
 	}
 	if d.disarmed {
 		if sim < d.Threshold-d.RearmMargin {
@@ -196,7 +191,6 @@ func (d *Detector) Feed(sim float64, now time.Time) bool {
 // phrase read by OCR: one frame is enough.
 func (d *Detector) FeedStrong(now time.Time) bool {
 	d.consec = max(d.consec, d.ConsecNeeded-1)
-	d.lastAbove = now
 	return d.Feed(1, now)
 }
 

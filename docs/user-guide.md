@@ -73,7 +73,7 @@ For every game: Windows only, and the game must run **Borderless** or **Windowed
 The app captures the screen about twice per second and uses two methods together:
 
 1. **OCR**: looks for keywords like "YOU DIED", "WASTED", "DEAD". The text must be **large** and **near the center**; small menu text, item names and corner HUD are ignored.
-2. **Templates**: compares the screen with saved death-screen images. Used for stylized text or games with no text.
+2. **Templates**: compares the screen with saved death-screen images. Used for stylized text or games with no text. Once OCR has read the death text in this session, a template match alone no longer counts: a dark death-screen template also matches dark respawns and dimmed screenshot tools.
 
 Each death screen is counted **once**, however long it stays.
 
@@ -175,8 +175,9 @@ It cannot be undone. To keep your counts, copy `DeathCounterData` somewhere firs
 ### How the current boss is found
 
 - OCR reads the **top** and **bottom** bands of the screen, where most games print the boss name above its health bar.
-- A label must **stay on screen for several seconds** to count as a boss, so subtitles are ignored. A label visible continuously for over 15 minutes is treated as HUD.
-- When you die, the death goes to the boss seen in the last **30 seconds**. −1 removes it from that boss.
+- A label must **stay on screen for about 5 seconds** to count as a boss, so subtitles are ignored. A label visible continuously for over 15 minutes is treated as HUD.
+- When you die, the death goes to the boss seen in the last **30 seconds**, or to a boss confirmed within 15 seconds after the death (Souls games often show the name clearly only on the death screen). −1 removes it from that boss.
+- Bosses are only read while a full-screen game (Borderless included) is in front, so text in a browser or chat window you switch to is ignored. Lines with a colon, such as button prompts ("E : Rest at bonfire"), are never boss names.
 
 ### Settings
 

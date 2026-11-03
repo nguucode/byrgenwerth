@@ -215,18 +215,13 @@ func TestDetectorFirstDeathFromOCR(t *testing.T) {
 	if d.FeedStrong(t0.Add(time.Second)) {
 		t.Fatal("same death screen must not count twice")
 	}
-	// Single-word hits need two reads, but a miss in between is fine.
+	// Templates and single words need two frames in a row: scattered frames
+	// just above the threshold during play are not a death.
 	d2 := NewDetector(0.8, 15*time.Second)
-	if d2.Feed(1, t0) || d2.Feed(0, t0.Add(time.Second)) {
-		t.Fatal("one read of a single word is not enough")
-	}
-	if !d2.Feed(1, t0.Add(2*time.Second)) {
-		t.Fatal("two reads within the window should count")
-	}
-	d3 := NewDetector(0.8, 15*time.Second)
-	d3.Feed(1, t0)
-	if d3.Feed(1, t0.Add(10*time.Second)) {
-		t.Fatal("reads far apart are not the same death screen")
+	for i, sim := range []float64{0.82, 0.5, 0.81, 0.6, 0.83, 0.4} {
+		if d2.Feed(sim, t0.Add(time.Duration(i)*time.Second)) {
+			t.Fatal("scattered frames above threshold must not count")
+		}
 	}
 	if !StrongKeyword("YOU DIED") || !StrongKeyword("殒命") || StrongKeyword("DEAD") || !StrongKeyword("KILLED BY *") {
 		t.Fatal("StrongKeyword")

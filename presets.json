@@ -36,10 +36,10 @@
   "ocr": "ok",
   "note": "Tên boss ở đầu trái thanh máu boss phía dưới.",
   "boss_zone": {
-   "X": 0.03,
-   "Y": 0.72,
-   "W": 0.6,
-   "H": 0.17
+   "X": 0.28,
+   "Y": 0.76,
+   "W": 0.47,
+   "H": 0.12
   }
  },
  {

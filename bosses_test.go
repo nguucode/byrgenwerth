@@ -103,6 +103,19 @@ func TestBossTrackerIgnoresSubtitles(t *testing.T) {
 	}
 }
 
+func TestBossTrackerSlowOCR(t *testing.T) {
+	// 4K screen: one OCR frame every 1.5 s; the player dies 9 s into the fight.
+	tr := NewBossTracker()
+	now := time.Unix(0, 0)
+	for i := 0; i < 7; i++ {
+		tr.Observe([]string{"Asylum Demon"}, now)
+		now = now.Add(1500 * time.Millisecond)
+	}
+	if b, ok := tr.Current(now.Add(3 * time.Second)); !ok || b != "Asylum Demon" {
+		t.Fatalf("short first fight must still credit the boss, got %q", b)
+	}
+}
+
 func TestBossTrackerIgnoresAlwaysOnHUD(t *testing.T) {
 	tr := NewBossTracker()
 	now := time.Unix(0, 0)
@@ -181,6 +194,22 @@ func fakeMeasure(text string, px int, bold bool) (int, int) {
 		w = w * 11 / 10
 	}
 	return w, px * 13 / 10
+}
+
+func TestBossCandidatesSkipPrompts(t *testing.T) {
+	zone := []ROI{{X: 0.28, Y: 0.76, W: 0.47, H: 0.12}}
+	mk := func(text string, x, y float64) OcrLine {
+		return OcrLine{Text: text, Words: []OcrWord{{Text: text, X: x, Y: y, W: 0.15, H: 0.02}}}
+	}
+	got := BossCandidates([]OcrLine{
+		mk("Asylum Demon", 0.35, 0.82),             // boss name (real position from a DSR log)
+		mk(":Đọc tin nhắn", 0.35, 0.82),            // button prompt
+		mk("E :Nghỉ ngơi tại bonfire", 0.35, 0.82), // button prompt
+		mk("10 Black Firebomb", 0.15, 0.92),        // item label, outside the zone
+	}, zone, DefaultKeywords)
+	if len(got) != 1 || got[0] != "Asylum Demon" {
+		t.Fatalf("want only the boss name, got %v", got)
+	}
 }
 
 func TestWithoutNames(t *testing.T) {

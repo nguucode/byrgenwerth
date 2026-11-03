@@ -151,6 +151,9 @@ func BossCandidates(lines []OcrLine, zones []ROI, deathKeywords []string) []stri
 		if letters < 3 || len([]rune(key)) > 48 || (!isCJK(key) && words > 8) {
 			continue
 		}
+		if strings.Contains(ln.Text, ":") {
+			continue // button prompts ("E : Rest at bonfire") and HUD labels, not boss names
+		}
 		if _, isDeath := MatchDeath([]OcrLine{ln}, deathKeywords, 0); isDeath {
 			continue
 		}
@@ -183,21 +186,22 @@ type bossSighting struct {
 	count int
 	since time.Time // start of the current continuous appearance
 	last  time.Time
+	boss  bool // once on screen for MinOnScreen; stays a boss when it comes back
 }
 
 // BossTracker decides which on-screen label is the current boss: a label that
 // stays on screen for many OCR frames (boss bars persist for the whole fight,
 // subtitles and item pickups do not).
 type BossTracker struct {
-	MinFrames int           // frames needed before a label counts as a boss
-	Forget    time.Duration // drop labels not seen for this long
-	Recent    time.Duration // a boss seen within this window gets the death
-	HUDAfter  time.Duration // a label visible continuously this long is HUD, not a boss
-	seen      []*bossSighting
+	MinOnScreen time.Duration // a label counts as a boss after staying on screen this long
+	Forget      time.Duration // drop labels not seen for this long
+	Recent      time.Duration // a boss seen within this window gets the death
+	HUDAfter    time.Duration // a label visible continuously this long is HUD, not a boss
+	seen        []*bossSighting
 }
 
 func NewBossTracker() *BossTracker {
-	return &BossTracker{MinFrames: 10, Forget: 45 * time.Second, Recent: 30 * time.Second, HUDAfter: 15 * time.Minute}
+	return &BossTracker{MinOnScreen: 5 * time.Second, Forget: 45 * time.Second, Recent: 30 * time.Second, HUDAfter: 15 * time.Minute}
 }
 
 func (t *BossTracker) Observe(cands []string, now time.Time) {
@@ -217,6 +221,7 @@ func (t *BossTracker) Observe(cands []string, now time.Time) {
 				}
 				s.count++
 				s.last = now
+				s.boss = s.boss || now.Sub(s.since) >= t.MinOnScreen
 				found = true
 				break
 			}
@@ -231,7 +236,9 @@ func (t *BossTracker) Observe(cands []string, now time.Time) {
 func (t *BossTracker) Current(now time.Time) (string, bool) {
 	var best *bossSighting
 	for _, s := range t.seen {
-		if s.count < t.MinFrames || now.Sub(s.last) > t.Recent {
+		// Time, not frame count: OCR runs about once a second on big screens, and a
+		// first fight can end within 10 frames.
+		if !s.boss || now.Sub(s.last) > t.Recent {
 			continue
 		}
 		if t.HUDAfter > 0 && s.last.Sub(s.since) > t.HUDAfter {

@@ -125,22 +125,29 @@ type App struct {
 	curBoss     string
 	lastBossHit string
 	lastBossAt  time.Time
-	boldCB      *walk.CheckBox
-	colorSw     *walk.Composite
-	colorLbl    *walk.Label
-	outlineCB   *walk.CheckBox
-	outlineNE   *walk.NumberEdit
-	outlineSw   *walk.Composite
-	outlineLbl  *walk.Label
-	urlLE       *walk.LineEdit
-	server      *OverlayServer
-	swBrushes   []*walk.SolidColorBrush
-	editPosPB   *walk.PushButton
-	volSlider   *walk.Slider
-	soundLbl    *walk.Label
-	ocrCB       *walk.CheckBox
-	ocrLbl      *walk.Label
-	kwLE        *walk.LineEdit
+	// deathNoBoss is when a death was counted before its boss was confirmed. In
+	// Souls games the name is often read cleanly only on the death screen.
+	deathNoBoss time.Time
+	// ocrProven: OCR has read this game's death text this session. From then on
+	// a template match alone does not count: templates of a dark death screen
+	// also match the dark respawn or a dimmed screenshot tool.
+	ocrProven  bool
+	boldCB     *walk.CheckBox
+	colorSw    *walk.Composite
+	colorLbl   *walk.Label
+	outlineCB  *walk.CheckBox
+	outlineNE  *walk.NumberEdit
+	outlineSw  *walk.Composite
+	outlineLbl *walk.Label
+	urlLE      *walk.LineEdit
+	server     *OverlayServer
+	swBrushes  []*walk.SolidColorBrush
+	editPosPB  *walk.PushButton
+	volSlider  *walk.Slider
+	soundLbl   *walk.Label
+	ocrCB      *walk.CheckBox
+	ocrLbl     *walk.Label
+	kwLE       *walk.LineEdit
 
 	overlay    *Overlay
 	sound      Sound
@@ -808,13 +815,21 @@ func (a *App) onFrame(fr frameResult) {
 				m, hit = MatchDeath(fr.lines, kw, a.cfg.OcrMinHeight)
 				a.ocrLbl.SetText(describeOcr(fr.lines, m, hit))
 			}
-			if a.cur.BossTrack {
+			// Boss names come from the game: skip frames where another window (a
+			// browser, chat) is in front, or its text becomes the "boss".
+			if a.cur.BossTrack && isOtherFullscreen(win.GetForegroundWindow()) {
 				own := []string{a.cur.Name, "Deaths", FormatObs(a.cfg.ObsFormat, a.cur.Name, a.cur.Deaths)}
 				a.tracker.Observe(WithoutNames(BossCandidates(fr.lines, a.bossZones(), kw), own), now)
 				b, _ := a.tracker.Current(now)
 				if b != a.curBoss {
 					a.curBoss = b
 					a.store.AppendDebugLog("BOSS "+b, now)
+					if b != "" && !a.deathNoBoss.IsZero() && now.Sub(a.deathNoBoss) <= 15*time.Second {
+						a.lastBossHit, a.lastBossAt = AddBossDeath(a.cur, b, 1), now
+						a.deathNoBoss = time.Time{}
+						a.store.SaveProfile(a.cur)
+						a.store.AppendDebugLog("BOSS credited the death just before: "+b, now)
+					}
 					a.refreshBosses()
 				}
 			}
@@ -823,6 +838,9 @@ func (a *App) onFrame(fr frameResult) {
 	eff := sim
 	if hit {
 		eff = 1
+		a.ocrProven = true
+	} else if a.ocrProven {
+		eff = 0
 	}
 	counted := false
 	if hit && StrongKeyword(m.Keyword) {
@@ -841,6 +859,7 @@ func (a *App) onFrame(fr frameResult) {
 		why = fmt.Sprintf("giống mẫu #%d: %d%%", idx+1, int(sim*100))
 	}
 	msg := fmt.Sprintf("Tự đếm lúc %s (%s). Đếm sai thì bấm %s.", now.Format("15:04:05"), why, a.cfg.Hotkeys.Sub)
+	a.store.AppendDebugLog("WHY  "+why+", boss: "+a.lastBossHit, now)
 	if hit {
 		msg += a.learnFromOcr(fr.small, m, sim)
 	}
@@ -1050,14 +1069,18 @@ func (a *App) addDeath(delta int, source string) {
 	if a.cur.BossTrack && a.tracker != nil {
 		now := time.Now()
 		if delta > 0 {
-			a.lastBossHit = ""
+			a.lastBossHit, a.deathNoBoss = "", now
 			if b, ok := a.tracker.Current(now); ok {
 				a.lastBossHit = AddBossDeath(a.cur, b, 1)
 				a.lastBossAt = now
+				a.deathNoBoss = time.Time{}
 			}
-		} else if a.lastBossHit != "" && now.Sub(a.lastBossAt) < 3*time.Minute {
-			AddBossDeath(a.cur, a.lastBossHit, -1) // undo the boss credit with the −1
-			a.lastBossHit = ""
+		} else {
+			a.deathNoBoss = time.Time{} // a −1 cancels a pending late boss credit
+			if a.lastBossHit != "" && now.Sub(a.lastBossAt) < 3*time.Minute {
+				AddBossDeath(a.cur, a.lastBossHit, -1) // undo the boss credit with the −1
+				a.lastBossHit = ""
+			}
 		}
 	}
 	a.store.SaveProfile(a.cur)
@@ -1484,6 +1507,7 @@ func (a *App) loadProfile(p *Profile) {
 		a.tracker.Reset()
 	}
 	a.curBoss, a.lastBossHit = "", ""
+	a.deathNoBoss, a.ocrProven = time.Time{}, false
 	a.refreshLangUI()
 	a.refreshBossZoneLabel()
 	a.hpDet = NewHPDeath(p.HPFull)

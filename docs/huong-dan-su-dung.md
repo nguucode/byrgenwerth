@@ -71,7 +71,7 @@ Với mọi game: chỉ chạy trên Windows, game phải để **Borderless** h
 App chụp màn hình khoảng 2 lần mỗi giây và dùng hai cách song song:
 
 1. **OCR (đọc chữ)**: tìm từ khóa như "YOU DIED", "WASTED", "DEAD"... Chữ phải **to** và **nằm gần giữa màn hình**; chữ nhỏ trong menu, tên item hay chữ ở góc đều bị bỏ qua.
-2. **Ảnh mẫu**: so màn hình với ảnh màn chết đã lưu. Dùng cho game có chữ cách điệu hoặc không có chữ.
+2. **Ảnh mẫu**: so màn hình với ảnh màn chết đã lưu. Dùng cho game có chữ cách điệu hoặc không có chữ. Khi OCR đã đọc được chữ chết trong phiên chơi này, chỉ khớp ảnh mẫu thôi thì không đếm nữa: ảnh mẫu màn chết tối cũng khớp cảnh hồi sinh tối hay màn hình bị công cụ chụp làm tối.
 
 Mỗi màn chết chỉ được đếm **một lần**, dù nó hiện bao lâu.
 
@@ -173,8 +173,9 @@ Không hoàn tác được. Muốn giữ số đếm thì copy `DeathCounterData
 ### Cách app biết bạn đang đánh boss nào
 
 - App đọc chữ ở **dải trên** và **dải dưới** màn hình, nơi hầu hết game in tên boss trên thanh máu.
-- Một dòng chữ phải **đứng yên vài giây** mới được coi là tên boss, nên phụ đề bị loại. Chữ đứng liên tục hơn 15 phút bị coi là HUD.
-- Khi bạn chết, lần chết được tính cho boss vừa thấy trong **30 giây** gần nhất. Bấm −1 thì trừ đúng boss đó.
+- Một dòng chữ phải **đứng yên khoảng 5 giây** mới được coi là tên boss, nên phụ đề bị loại. Chữ đứng liên tục hơn 15 phút bị coi là HUD.
+- Khi bạn chết, lần chết được tính cho boss vừa thấy trong **30 giây** gần nhất, hoặc cho boss được xác nhận trong vòng 15 giây sau khi chết (game Souls thường chỉ hiện rõ tên trên màn chết). Bấm −1 thì trừ đúng boss đó.
+- App chỉ đọc tên boss khi một game toàn màn hình (kể cả Borderless) đang ở trước, nên chữ trong trình duyệt hay cửa sổ chat bạn chuyển sang bị bỏ qua. Dòng có dấu hai chấm, như dòng nhắc nút bấm ("E : Nghỉ ngơi tại bonfire"), không bao giờ được coi là tên boss.
 
 ### Các mục
 
