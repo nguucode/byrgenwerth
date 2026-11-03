@@ -90,7 +90,7 @@ type App struct {
 	roiLbl     *walk.Label
 	tmplLB     *walk.ListBox
 	tmplIV     *walk.ImageView
-	tmplInfo   *walk.Label
+	tmplInfo   *walk.TextLabel
 	obsLE      *walk.LineEdit
 	obsPathLE  *walk.LineEdit
 	topCB      *walk.CheckBox
@@ -100,7 +100,7 @@ type App struct {
 	fontNE     *walk.NumberEdit
 	fontCB     *walk.ComboBox
 	presetCB   *walk.ComboBox
-	presetLbl  *walk.Label
+	presetLbl  *walk.TextLabel
 	presets    []Preset
 
 	langCB      *walk.ComboBox
@@ -225,9 +225,20 @@ func title(text string) Widget {
 	return Label{Text: text, Font: titleFont}
 }
 
-// hint is a small gray helper line.
+// hint is a small gray helper line. TextLabel with a MinSize width wraps
+// instead of widening the window.
 func hint(text string) Widget {
-	return Label{Text: text, TextColor: hintColor}
+	return TextLabel{Text: text, TextColor: hintColor, MinSize: Size{Width: 100}}
+}
+
+// sep is a thin horizontal rule. walk's HSeparator is greedy vertically
+// and eats all free height, so it is not used.
+func sep() Widget {
+	return Composite{
+		MinSize:    Size{Height: 1},
+		MaxSize:    Size{Height: 1},
+		Background: SolidColorBrush{Color: walk.RGB(220, 220, 220)},
+	}
 }
 
 // form lays out label/control pairs in two aligned columns.
@@ -246,13 +257,6 @@ func (a *App) buildUI() error {
 		monNames[i] = m.Label(i)
 	}
 	pageLayout := VBox{Margins: Margins{Left: 10, Top: 10, Right: 10, Bottom: 10}, Spacing: 6}
-	// scroll wraps a tab's content so a long tab scrolls instead of overflowing.
-	scroll := func(tp TabPage) TabPage {
-		return TabPage{Title: tp.Title, Layout: VBox{MarginsZero: true}, Children: []Widget{
-			ScrollView{HorizontalFixed: true, Layout: tp.Layout, Children: tp.Children},
-		}}
-	}
-
 	detectTab := TabPage{
 		Title:  "Nhận diện",
 		Layout: pageLayout,
@@ -267,8 +271,8 @@ func (a *App) buildUI() error {
 				Label{Text: "Mẫu theo game"}, ComboBox{AssignTo: &a.presetCB, Model: a.presetNames(), OnCurrentIndexChanged: a.onPresetChanged},
 				Label{Text: "Từ khóa"}, LineEdit{AssignTo: &a.kwLE, Text: strings.Join(a.cfg.Keywords, ", "), OnEditingFinished: a.onKeywordsChanged},
 			),
-			Label{AssignTo: &a.presetLbl, Text: "Cách nhau bằng dấu phẩy. Thêm * ở cuối để khớp phần đầu câu.", TextColor: hintColor},
-			HSeparator{},
+			TextLabel{AssignTo: &a.presetLbl, Text: "Cách nhau bằng dấu phẩy. Thêm * ở cuối để khớp phần đầu câu.", TextColor: hintColor, MinSize: Size{Width: 100}},
+			sep(),
 			title("So khớp ảnh mẫu"),
 			form(
 				Label{Text: "Độ giống"}, Label{AssignTo: &a.simLbl, Text: "--"},
@@ -287,9 +291,9 @@ func (a *App) buildUI() error {
 					PushButton{Text: "Khoanh vùng...", OnClicked: a.editROI},
 				),
 			),
-			HSeparator{},
+			sep(),
 			title("Ảnh mẫu"),
-			Label{AssignTo: &a.tmplInfo, Text: "Chưa có mẫu.", TextColor: hintColor},
+			TextLabel{AssignTo: &a.tmplInfo, Text: "Chưa có mẫu.", TextColor: hintColor, MinSize: Size{Width: 100}},
 			Composite{
 				Layout: HBox{MarginsZero: true, Spacing: 6},
 				Children: []Widget{
@@ -302,7 +306,7 @@ func (a *App) buildUI() error {
 				PushButton{Text: "Xóa mẫu đã chọn", OnClicked: a.removeTemplate},
 				HSpacer{},
 			),
-			HSeparator{},
+			sep(),
 			title("Máu nhân vật (game không có màn chết)"),
 			CheckBox{AssignTo: &a.hpCB, Text: "Đếm khi máu về 0 rồi màn hình tối đen", OnCheckedChanged: a.onHPChanged},
 			form(
@@ -326,7 +330,7 @@ func (a *App) buildUI() error {
 				Label{Text: "Định dạng"}, LineEdit{AssignTo: &a.obsLE, Text: a.cfg.ObsFormat, OnTextChanged: a.onObsFormatChanged},
 			),
 			hint("{count} = số lần chết, {game} = tên game."),
-			HSeparator{},
+			sep(),
 			title("Kiểu chữ (overlay + OBS)"),
 			form(
 				Label{Text: "Font"}, ComboBox{AssignTo: &a.fontCB, Editable: true, Model: a.fontList(), OnCurrentIndexChanged: a.onStyleChanged, OnEditingFinished: a.onStyleChanged},
@@ -355,7 +359,7 @@ func (a *App) buildUI() error {
 					HSpacer{},
 				),
 			),
-			HSeparator{},
+			sep(),
 			title("Overlay trên màn hình"),
 			CheckBox{AssignTo: &a.overlayCB, Text: "Hiện overlay nổi trên game", Checked: a.cfg.OverlayEnabled, OnCheckedChanged: a.onOverlayEnabledChanged},
 			form(
@@ -366,7 +370,7 @@ func (a *App) buildUI() error {
 				),
 			),
 			hint("OBS chỉ thấy overlay này khi dùng Display Capture."),
-			HSeparator{},
+			sep(),
 			title("OBS"),
 			form(
 				Label{Text: "Browser Source"}, row(
@@ -419,7 +423,7 @@ func (a *App) buildUI() error {
 				),
 			),
 			hint("App không kèm sẵn âm thanh: tự chọn file .mp3 hoặc .wav của bạn. Âm lượng chỉ áp dụng cho mp3."),
-			HSeparator{},
+			sep(),
 			title("Dữ liệu"),
 			form(
 				Label{Text: "Thư mục"}, row(
@@ -458,7 +462,7 @@ func (a *App) buildUI() error {
 				),
 			),
 			hint("Tên boss đứng yên trên màn hình vài giây mới được ghi nhận, phụ đề sẽ bị bỏ qua."),
-			HSeparator{},
+			sep(),
 			title("Thống kê"),
 			ListBox{AssignTo: &a.bossLB, MinSize: Size{Height: 110}},
 			row(
@@ -468,7 +472,7 @@ func (a *App) buildUI() error {
 				HSpacer{},
 				PushButton{Text: "Xóa hết", OnClicked: a.clearBosses},
 			),
-			HSeparator{},
+			sep(),
 			title("Bảng Top 3"),
 			CheckBox{AssignTo: &a.panelCB, Text: "Hiện bảng nổi trên màn hình", Checked: a.cfg.BossPanelEnabled, OnCheckedChanged: a.onPanelEnabledChanged},
 			form(
@@ -511,7 +515,7 @@ func (a *App) buildUI() error {
 				PushButton{Text: "Đổi tên", OnClicked: a.renameProfile},
 				PushButton{Text: "Xóa", OnClicked: a.deleteProfile},
 			),
-			HSeparator{},
+			sep(),
 			row(
 				Composite{
 					Layout: VBox{MarginsZero: true, SpacingZero: true},
@@ -530,8 +534,8 @@ func (a *App) buildUI() error {
 				PushButton{Text: "−1", MinSize: Size{Width: 56}, OnClicked: func() { a.addDeath(-1, "button") }},
 				PushButton{Text: "Reset", OnClicked: a.resetCount},
 			),
-			TabWidget{Pages: []TabPage{scroll(detectTab), scroll(displayTab), scroll(soundTab), scroll(bossTab)}},
-			HSeparator{},
+			TabWidget{Pages: []TabPage{detectTab, displayTab, soundTab, bossTab}},
+			sep(),
 			CheckBox{AssignTo: &a.topCB, Text: "Cửa sổ app luôn nằm trên", Checked: a.cfg.AlwaysOnTop, OnCheckedChanged: a.onTopChanged},
 			Label{AssignTo: &a.hkLbl, Text: "", TextColor: hintColor},
 			Label{AssignTo: &a.statusLbl, Text: "", EllipsisMode: EllipsisEnd},
