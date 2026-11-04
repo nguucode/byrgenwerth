@@ -1,6 +1,6 @@
 name: release
 
-# Build Byrgenwerth.exe on Windows and publish a release, either by pushing a
+# Build Byrgenwerth for Windows and macOS and publish a release, either by pushing a
 # tag like v0.8.0 or from the Actions tab ("Run workflow", enter the version).
 on:
   push:
@@ -38,3 +38,20 @@ jobs:
           else
             gh release create "$VERSION" Byrgenwerth.exe --target "$GITHUB_SHA" --title "Byrgenwerth $VERSION" --generate-notes
           fi
+
+  macos:
+    needs: release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - run: go test ./...
+      - name: Build and attach
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          scripts/build-mac.sh "${VERSION#v}"
+          gh release upload "$VERSION" dist/Byrgenwerth-macos.zip

@@ -4,7 +4,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"image"
 	"syscall"
 	"unsafe"
@@ -20,21 +19,6 @@ var (
 	procPostThreadMessageW  = user32.NewProc("PostThreadMessageW")
 )
 
-type Monitor struct {
-	Rect    win.RECT
-	Primary bool
-}
-
-func (m Monitor) Label(i int) string {
-	w := m.Rect.Right - m.Rect.Left
-	h := m.Rect.Bottom - m.Rect.Top
-	s := fmt.Sprintf("Màn hình %d (%dx%d)", i+1, w, h)
-	if m.Primary {
-		s += " - chính"
-	}
-	return s
-}
-
 // enumCb is created once: Go limits how many syscall callbacks can exist.
 var (
 	enumMons []Monitor
@@ -42,7 +26,7 @@ var (
 		var mi win.MONITORINFO
 		mi.CbSize = uint32(unsafe.Sizeof(mi))
 		if win.GetMonitorInfo(win.HMONITOR(hMon), &mi) {
-			enumMons = append(enumMons, Monitor{Rect: mi.RcMonitor, Primary: mi.DwFlags&1 != 0})
+			enumMons = append(enumMons, Monitor{Rect: PxRect{mi.RcMonitor.Left, mi.RcMonitor.Top, mi.RcMonitor.Right, mi.RcMonitor.Bottom}, Primary: mi.DwFlags&1 != 0})
 		}
 		return 1
 	})
@@ -62,41 +46,15 @@ func ListMonitors() []Monitor {
 		}
 	}
 	if len(mons) == 0 {
-		mons = append(mons, Monitor{Rect: win.RECT{Right: win.GetSystemMetrics(win.SM_CXSCREEN), Bottom: win.GetSystemMetrics(win.SM_CYSCREEN)}, Primary: true})
+		mons = append(mons, Monitor{Rect: PxRect{R: win.GetSystemMetrics(win.SM_CXSCREEN), B: win.GetSystemMetrics(win.SM_CYSCREEN)}, Primary: true})
 	}
 	return mons
-}
-
-// CaptureMonitor grabs the monitor scaled down to CaptureW x CaptureH.
-func CaptureMonitor(m Monitor) (*image.RGBA, error) {
-	return CaptureMonitorScaled(m, CaptureW, CaptureH)
-}
-
-// OcrSize keeps the monitor's aspect ratio at 1280 px wide (enough for banner text).
-func OcrSize(m Monitor) (int32, int32) {
-	w := m.Rect.Right - m.Rect.Left
-	h := m.Rect.Bottom - m.Rect.Top
-	if w <= 0 || h <= 0 {
-		return 1280, 720
-	}
-	// 1920 keeps small labels (boss names on a 4K screen) readable for OCR.
-	ow := int32(1920)
-	if w < ow {
-		ow = w
-	}
-	oh := ow * h / w
-	return ow, oh &^ 1
 }
 
 // CaptureMonitorScaled grabs the monitor scaled to cw x ch.
 // Scaling happens in GDI (HALFTONE), so we never copy a full 4K frame to Go.
 func CaptureMonitorScaled(m Monitor, cw, ch int32) (*image.RGBA, error) {
-	return captureRect(m.Px(), cw, ch)
-}
-
-// Px is the monitor's rectangle on the virtual screen.
-func (m Monitor) Px() PxRect {
-	return PxRect{m.Rect.Left, m.Rect.Top, m.Rect.Right, m.Rect.Bottom}
+	return captureRect(m.Rect, cw, ch)
 }
 
 // CaptureRegion grabs a screen rectangle for OCR, no wider than 1920 px.

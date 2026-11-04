@@ -37,6 +37,22 @@ Manual install: download `Byrgenwerth.exe` from [Releases](https://github.com/ng
 
 Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, Windows blocks screen capture and the overlay is hidden.
 
+### macOS
+
+macOS 14 or newer, Apple Silicon or Intel. It has the same two tools as Windows. Run this in Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nguucode/death-counter/main/install.sh | sh
+```
+
+The app goes to `~/Applications`, with its data in `~/Library/Application Support/Byrgenwerth`. Run the command again to update. It has no Dock icon: use **Byrgenwerth** in the menu bar to open the window or quit.
+
+- Allow **Screen Recording** when macOS asks, then open the app again. Because the app is not notarized, macOS may ask again after an update.
+- The API key is kept in the Keychain.
+- F keys need **fn** on most Mac keyboards, unless *Use F1, F2 as standard function keys* is on. F11 is also the default Show Desktop shortcut, so **Chụp mẫu ngay** may be the easier way to capture a template. To change hotkeys, edit `hotkeys` in `config.json`.
+- Boss names are read while another app's window fills most of the screen. A large browser window counts too, so keep it out of the way during a fight.
+- The Mac version has not been tried with a game yet. Most Windows games reach a Mac through a translation layer, so expect differences in what can be read.
+
 ## 2. Main window
 
 The header shows the app name and version. **Death count** and **Translate** switch between the two tools. The items below belong to Death count; see [section 11](#11-translate-tab-real-time-dialogue-translation) for Translate.

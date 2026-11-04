@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -77,5 +78,32 @@ func TestBossEndpoint(t *testing.T) {
 	r.Body.Close()
 	if !strings.Contains(string(b), "/bosses/state") {
 		t.Fatal("boss page wrong")
+	}
+}
+
+func TestRequireTokenKeepsOtherPagesOut(t *testing.T) {
+	h := RequireToken("secret", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusTeapot) })
+	cases := []struct {
+		name, method, url, host, header string
+		want                            int
+	}{
+		{"header", "POST", "/api", "127.0.0.1:17321", "secret", http.StatusTeapot},
+		{"query on GET, for images", "GET", "/api?t=secret", "127.0.0.1:17321", "", http.StatusTeapot},
+		{"query on POST is not enough", "POST", "/api?t=secret", "127.0.0.1:17321", "", http.StatusForbidden},
+		{"no token", "POST", "/api", "127.0.0.1:17321", "", http.StatusForbidden},
+		{"wrong token", "POST", "/api", "127.0.0.1:17321", "nope", http.StatusForbidden},
+		{"DNS rebinding", "POST", "/api", "evil.example:17321", "secret", http.StatusForbidden},
+	}
+	for _, c := range cases {
+		r := httptest.NewRequest(c.method, c.url, nil)
+		r.Host = c.host
+		if c.header != "" {
+			r.Header.Set("X-Token", c.header)
+		}
+		w := httptest.NewRecorder()
+		h(w, r)
+		if w.Code != c.want {
+			t.Errorf("%s: got %d", c.name, w.Code)
+		}
 	}
 }

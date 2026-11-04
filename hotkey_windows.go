@@ -9,18 +9,6 @@ import (
 	"github.com/lxn/win"
 )
 
-type HotkeyAction int
-
-const (
-	ActAdd HotkeyAction = iota + 1
-	ActSub
-	ActCapture
-	ActToggle
-	ActWindow
-	ActTranslate
-	ActTranslateRegion
-)
-
 // HotkeyManager owns a dedicated OS thread: RegisterHotKey with a NULL window
 // posts WM_HOTKEY to the registering thread's message queue.
 type HotkeyManager struct {

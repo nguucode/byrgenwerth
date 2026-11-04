@@ -35,6 +35,22 @@ Cài tay: tải `Byrgenwerth.exe` ở trang [Releases](https://github.com/nguuco
 
 Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclusive Fullscreen, Windows không cho app chụp màn hình game và overlay bị che.
 
+### macOS
+
+macOS 14 trở lên, Apple Silicon hoặc Intel. Có đủ hai công cụ như bản Windows. Chạy lệnh này trong Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nguucode/death-counter/main/install.sh | sh
+```
+
+App được cài vào `~/Applications`, dữ liệu nằm ở `~/Library/Application Support/Byrgenwerth`. Chạy lại lệnh để cập nhật. App không có icon ở Dock: dùng mục **Byrgenwerth** trên thanh menu để mở cửa sổ hoặc thoát.
+
+- Cho phép **Screen Recording** khi macOS hỏi, rồi mở lại app. App chưa được notarize nên macOS có thể hỏi lại sau mỗi lần cập nhật.
+- API key được lưu trong Keychain.
+- Phím F cần giữ **fn** trên đa số bàn phím Mac, trừ khi đã bật *Use F1, F2 as standard function keys*. F11 cũng là phím Show Desktop mặc định, nên dùng nút **Chụp mẫu ngay** sẽ dễ hơn. Muốn đổi phím tắt thì sửa mục `hotkeys` trong `config.json`.
+- Tên boss được đọc khi cửa sổ của app khác chiếm gần hết màn hình. Cửa sổ trình duyệt lớn cũng tính, nên khi đánh boss đừng để nó ở phía trước.
+- Bản Mac chưa được thử với game thật. Đa số game Windows chạy trên Mac qua lớp dịch, nên khả năng đọc chữ có thể khác.
+
 ## 2. Màn hình chính
 
 Đầu cửa sổ là tên app và phiên bản. Hai nút **Death count** và **Translate** chuyển giữa hai công cụ. Các mục dưới đây thuộc Death count; Translate xem [mục 11](#11-tab-translate-dịch-hội-thoại-theo-thời-gian-thực).

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -185,6 +186,39 @@ type PxRect struct {
 	L, T, R, B int32
 }
 
+// Monitor is one screen on the virtual desktop.
+type Monitor struct {
+	Rect    PxRect
+	Primary bool
+}
+
+// Px is the monitor's rectangle.
+func (m Monitor) Px() PxRect { return m.Rect }
+
+func (m Monitor) Label(i int) string {
+	s := fmt.Sprintf("Màn hình %d (%dx%d)", i+1, m.Rect.R-m.Rect.L, m.Rect.B-m.Rect.T)
+	if m.Primary {
+		s += " - chính"
+	}
+	return s
+}
+
+// OcrSize keeps the monitor's aspect ratio at 1280 px wide (enough for banner text).
+func OcrSize(m Monitor) (int32, int32) {
+	w := m.Rect.R - m.Rect.L
+	h := m.Rect.B - m.Rect.T
+	if w <= 0 || h <= 0 {
+		return 1280, 720
+	}
+	// 1920 keeps small labels (boss names on a 4K screen) readable for OCR.
+	ow := int32(1920)
+	if w < ow {
+		ow = w
+	}
+	oh := ow * h / w
+	return ow, oh &^ 1
+}
+
 // ToPixels places a normalized region on a monitor.
 func (r ROI) ToPixels(mon PxRect) PxRect {
 	w, h := float64(mon.R-mon.L), float64(mon.B-mon.T)
@@ -210,4 +244,32 @@ func PlaceSubtitle(region, mon PxRect, w, h int32) (x, y int32) {
 	x = max(mon.L, min(x, mon.R-w))
 	y = max(mon.T, min(y, mon.B-h))
 	return x, y
+}
+
+// parseVisionOCR reads the JSON the macOS OCR layer returns.
+func parseVisionOCR(raw string) ([]OcrLine, error) {
+	var out struct {
+		Error string `json:"error"`
+		Lines []struct {
+			Text  string `json:"text"`
+			Words []struct {
+				T          string
+				X, Y, W, H float64
+			} `json:"words"`
+		} `json:"lines"`
+	}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return nil, err
+	}
+	if out.Error != "" {
+		return nil, errors.New(out.Error)
+	}
+	lines := make([]OcrLine, len(out.Lines))
+	for i, l := range out.Lines {
+		lines[i].Text = l.Text
+		for _, w := range l.Words {
+			lines[i].Words = append(lines[i].Words, OcrWord{Text: w.T, X: w.X, Y: w.Y, W: w.W, H: w.H})
+		}
+	}
+	return lines, nil
 }

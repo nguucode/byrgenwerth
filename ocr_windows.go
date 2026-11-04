@@ -153,11 +153,6 @@ type OcrEngine struct {
 	Langs   []OcrLang // recognizer languages installed on this PC
 }
 
-type OcrLang struct {
-	Tag  string
-	Name string
-}
-
 func languagesFrom(stat comObj) []OcrLang {
 	var vec comObj
 	if stat.call(slotOcrStaticsAvailableLanguages, uintptr(unsafe.Pointer(&vec))); vec == 0 {

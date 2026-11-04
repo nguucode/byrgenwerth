@@ -186,3 +186,16 @@ func TestROIRelativeToAParentRegion(t *testing.T) {
 		t.Fatalf("got %+v", r)
 	}
 }
+
+func TestParseVisionOCR(t *testing.T) {
+	lines, err := parseVisionOCR(`{"lines":[{"text":"YOU DIED","words":[{"t":"YOU","x":0.3,"y":0.4,"w":0.1,"h":0.08},{"t":"DIED","x":0.45,"y":0.4,"w":0.1,"h":0.08}]}]}`)
+	if err != nil || len(lines) != 1 || lines[0].Text != "YOU DIED" || lines[0].Words[1].Text != "DIED" || lines[0].Words[1].X != 0.45 {
+		t.Fatalf("%+v %v", lines, err)
+	}
+	if m, hit := MatchDeath(lines, []string{"YOU DIED"}, 0.025); !hit || m.Keyword != "YOU DIED" {
+		t.Fatalf("Vision lines must match like Windows OCR lines: %+v", m)
+	}
+	if _, err := parseVisionOCR(`{"error":"no access"}`); err == nil || err.Error() != "no access" {
+		t.Fatalf("error %v", err)
+	}
+}

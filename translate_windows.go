@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -15,29 +14,6 @@ import (
 	. "github.com/lxn/walk/declarative"
 	"github.com/lxn/win"
 )
-
-const translateInterval = 250 * time.Millisecond
-
-// translationState belongs to the UI thread, the only writer. translateLoop
-// reads loop; writes to it take a.mu.
-type translationState struct {
-	on         bool
-	apiKey     string
-	translator *Translator
-	subtitle   *Overlay
-	latest     int  // the newest line sent for translation; older replies are dropped
-	picking    bool // the region dialog is open
-	ctx        context.Context
-	cancel     context.CancelFunc
-	loop       translateLoopState
-}
-
-type translateLoopState struct {
-	on     bool
-	region PxRect
-	ignore []ROI // the app's own windows, normalized to the region
-	gen    int
-}
 
 func (a *App) translatePage() Widget {
 	hk := a.cfg.Hotkeys
@@ -106,18 +82,7 @@ func (a *App) initTranslation() {
 	o.FontSize = a.cfg.TranslateFontSize
 	o.FontFamily = "Segoe UI"
 	o.Subtitle = &SubtitleState{}
-	t.subtitle = o
-}
-
-func (a *App) hasTranslateRegion() bool { return a.cfg.TranslateROI.W > 0 }
-
-func (a *App) refreshTranslateRegionLabel() {
-	if !a.hasTranslateRegion() {
-		a.trRegionLbl.SetText("Chưa khoanh")
-		return
-	}
-	r := a.cfg.TranslateROI.ToPixels(a.currentMonitor().Px())
-	a.trRegionLbl.SetText(fmt.Sprintf("%d×%d px", r.R-r.L, r.B-r.T))
+	a.subtitle = o
 }
 
 func (a *App) onAPIKeyChanged() {
@@ -141,7 +106,7 @@ func (a *App) onSubtitleFontChanged() {
 	}
 	a.cfg.TranslateFontSize = int(a.trFontNE.Value())
 	a.saveConfig()
-	if s := a.translation.subtitle; s != nil {
+	if s := a.subtitle; s != nil {
 		s.FontSize = a.cfg.TranslateFontSize
 		if win.IsWindowVisible(s.hwnd) {
 			a.renderSubtitle()
@@ -152,7 +117,7 @@ func (a *App) onSubtitleFontChanged() {
 func (a *App) onTranslateToggled() {
 	t := &a.translation
 	on := a.trOnCB.Checked()
-	if on && t.subtitle == nil {
+	if on && a.subtitle == nil {
 		a.trOnCB.SetChecked(false)
 		a.setStatus("Không tạo được khung phụ đề, không bật dịch được.")
 		return
@@ -195,33 +160,6 @@ func (a *App) showTranslateHint() {
 	a.showSubtitle("", "Đang đọc vùng đã khoanh. "+h.TranslateRegion+" khoanh lại · "+h.TranslateToggle+" tắt", false)
 }
 
-// syncTranslateLoop hands the current settings to the OCR loop and restarts its
-// line tracking.
-func (a *App) syncTranslateLoop() {
-	t := &a.translation
-	a.mu.Lock()
-	t.loop.on = t.on
-	t.loop.region = a.cfg.TranslateROI.ToPixels(a.currentMonitor().Px())
-	t.loop.gen++
-	a.mu.Unlock()
-	a.refreshTranslateIgnore()
-}
-
-// refreshTranslateIgnore keeps OCR from reading, and paying to translate, the
-// subtitle or any other window of the app that sits inside the region.
-func (a *App) refreshTranslateIgnore() {
-	if !a.hasTranslateRegion() {
-		return
-	}
-	var ignore []ROI
-	for _, own := range a.ownRects() {
-		ignore = append(ignore, own.RelativeTo(a.cfg.TranslateROI))
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.translation.loop.ignore = ignore
-}
-
 // editTranslateRegion takes a screenshot of the game without the app or the
 // subtitle on it, then lets the user drag over the dialogue.
 func (a *App) editTranslateRegion() {
@@ -259,152 +197,31 @@ func (a *App) editTranslateRegion() {
 	}
 }
 
-// translateLoop reads the region and reports settled lines to the UI thread.
-func (a *App) translateLoop() {
-	defer a.wg.Done()
-	// WinRT OCR objects live on this thread for its whole life.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	var ocr *OcrEngine
-	defer func() { ocr.Close() }()
-
-	var stab Stabilizer
-	gen := 0
-	for {
-		select {
-		case <-a.quit:
-			return
-		case <-time.After(translateInterval):
-		}
-		a.mu.Lock()
-		st := a.translation.loop
-		a.mu.Unlock()
-		if !st.on {
-			continue
-		}
-		if st.gen != gen {
-			gen, stab = st.gen, Stabilizer{}
-		}
-		if ocr == nil {
-			var err error
-			if ocr, err = NewOcrEngine("en-US"); err != nil {
-				ocr = nil
-				msg := err.Error()
-				a.mw.Synchronize(func() { a.onTranslateOcrFailed(msg) })
-				continue
-			}
-		}
-		img, err := CaptureRegion(st.region)
-		if err != nil {
-			continue
-		}
-		lines, err := ocr.Recognize(img)
-		if err != nil {
-			continue
-		}
-		var texts []string
-		for _, ln := range DropLinesInside(lines, st.ignore) {
-			texts = append(texts, ln.Text)
-		}
-		line, ev := stab.Feed(strings.Join(texts, "\n"), time.Now())
-		if ev != StableNone {
-			a.mw.Synchronize(func() { a.onStableLine(st.gen, line, ev) })
-		}
-	}
-}
-
-func (a *App) onTranslateOcrFailed(msg string) {
+func (a *App) translateOcrFailed(msg string) {
 	a.trOnCB.SetChecked(false)
 	a.bringToFront()
 	a.setStatus("Không đọc được chữ tiếng Anh: " + msg + " Thêm English trong Windows Settings → Time & language → Language & region.")
 }
 
-func (a *App) onStableLine(gen int, line string, ev StableEvent) {
-	t := &a.translation
-	if !t.on || gen != t.loop.gen {
-		return
-	}
-	if ev == StableClear {
-		t.latest++ // a reply still in flight belongs to text that is gone
-		a.hideSubtitle()
-		return
-	}
-	a.translateLine(line)
-}
-
-func (a *App) translateLine(line string) {
-	t := &a.translation
-	t.latest++
-	request := t.latest
-	a.trSrcLbl.SetText(line)
-	if len([]rune(line)) > MaxTranslateChars {
-		a.showSubtitle("", "Vùng khoanh có quá nhiều chữ. Bấm "+a.cfg.Hotkeys.TranslateRegion+" để khoanh hẹp lại.", false)
-		return
-	}
-	game := ""
-	if a.cur != nil && a.cur.Name != newProfileName {
-		game = a.cur.Name
-	}
-	if t.translator == nil || t.translator.game != game {
-		t.translator = NewTranslator(game, NewAnthropicSend(t.apiKey))
-	}
-	tr := t.translator
-
-	// Keep the previous line, dimmed, so the box does not jump.
-	if s := t.subtitle.Subtitle; s.Text != "" {
-		a.showSubtitle(s.Text, "", true)
-	} else {
-		a.showSubtitle("", "Đang dịch…", false)
-	}
-	a.wg.Add(1)
-	go func() {
-		defer a.wg.Done()
-		res, err := tr.Translate(t.ctx, line)
-		a.mw.Synchronize(func() { a.onTranslated(request, line, tr, res, err) })
-	}()
-}
-
-func (a *App) onTranslated(request int, line string, tr *Translator, res TranslateResult, err error) {
-	if request != a.translation.latest { // newer text is already on its way
-		return
-	}
-	if err != nil {
-		msg := DescribeTranslateError(err)
-		a.trDstLbl.SetText(msg)
-		// Still show the English: an unreadable second is worse than an untranslated one.
-		a.showSubtitle(line, msg, false)
-		return
-	}
-	a.trDstLbl.SetText(res.Text)
-	a.showSubtitle(res.Text, "", false)
-	took := "lấy từ cache"
-	if !res.Cached {
-		took = fmt.Sprintf("%d ms", res.Took.Milliseconds())
-	}
-	a.trCostLbl.SetText(fmt.Sprintf("Câu vừa rồi: %s  ·  Chi phí ước tính phiên này: $%.4f", took, tr.TotalUSD()))
-}
-
-func (a *App) showSubtitle(text, note string, dim bool) {
-	s := a.translation.subtitle
+func (a *App) drawSubtitle(text, note string, dim bool) {
+	s := a.subtitle
 	s.Subtitle.Text, s.Subtitle.Note, s.Subtitle.Dim = text, note, dim
 	a.renderSubtitle()
 	s.Show(true)
-	a.refreshTranslateIgnore()
 }
 
 func (a *App) renderSubtitle() {
-	s := a.translation.subtitle
+	s := a.subtitle
 	s.Subtitle.Region = a.translation.loop.region
 	s.Subtitle.Monitor = a.currentMonitor().Px()
 	s.Render()
 }
 
-func (a *App) hideSubtitle() {
-	if s := a.translation.subtitle; s != nil {
+func (a *App) eraseSubtitle() {
+	if s := a.subtitle; s != nil {
 		s.Subtitle.Text, s.Subtitle.Note = "", ""
 		s.Show(false)
 	}
-	a.refreshTranslateIgnore()
 }
 
 // SubtitleState is what the translation box shows and where it anchors.
@@ -497,4 +314,22 @@ func (o *Overlay) renderSubtitle() {
 		uintptr(unsafe.Pointer(&dst)), uintptr(unsafe.Pointer(&size)),
 		uintptr(memDC), uintptr(unsafe.Pointer(&src)), 0,
 		uintptr(unsafe.Pointer(&blend)), 2 /* ULW_ALPHA */)
+}
+
+func (a *App) sync(f func())       { a.mw.Synchronize(f) }
+func (a *App) simText(s string)    { a.simLbl.SetText(s) }
+func (a *App) hpText(s string)     { a.hpLbl.SetText(s) }
+func (a *App) ocrText(s string)    { a.ocrLbl.SetText(s) }
+func (a *App) inGame() bool        { return isOtherFullscreen(win.GetForegroundWindow()) }
+func (a *App) trSrcText(s string)  { a.trSrcLbl.SetText(s) }
+func (a *App) trDstText(s string)  { a.trDstLbl.SetText(s) }
+func (a *App) trCostText(s string) { a.trCostLbl.SetText(s) }
+
+func (a *App) refreshTranslateRegionLabel() {
+	if !a.hasTranslateRegion() {
+		a.trRegionLbl.SetText("Chưa khoanh")
+		return
+	}
+	r := a.cfg.TranslateROI.ToPixels(a.currentMonitor().Px())
+	a.trRegionLbl.SetText(fmt.Sprintf("%d×%d px", r.R-r.L, r.B-r.T))
 }

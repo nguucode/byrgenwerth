@@ -10,9 +10,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -22,63 +20,22 @@ import (
 	"github.com/lxn/win"
 )
 
-const newProfileName = "Game mới"
-
 //go:embed icon.png
 var iconPNG []byte
 
-type loopState struct {
-	enabled      bool
-	hp           bool
-	hpZone       ROI
-	hpColor      HPColor
-	ocr          bool
-	ocrLang      string
-	hasTemplates bool
-	mon          Monitor
-	roi          ROI
-	gen          int
-}
-
-type frameResult struct {
-	gen     int
-	hpRaw   float64 // -1 when not measured
-	black   bool
-	langs   []OcrLang // set when the OCR engine was (re)created
-	small   *image.RGBA
-	feat    Feature
-	hasFeat bool
-	ranOcr  bool
-	lines   []OcrLine
-	ocrErr  error
-}
-
 type App struct {
-	store    *Store
-	cfg      Config
+	Engine
+
+	subtitle *Overlay
 	profiles []*Profile
-	cur      *Profile
 
-	tmplImgs  []image.Image
-	tmplFeats []Feature
-	det       *Detector
-	monitors  []Monitor
-	gen       int
+	tmplImgs []image.Image
 
-	mu   sync.Mutex
-	loop loopState
-	quit chan struct{}
-	wg   sync.WaitGroup
-
-	ocrAvailable bool
-	ocrInitErr   string
 	migrated     bool
 	dirWarn      string
 	uninstalling bool
-	lastFg       win.HWND   // foreground window last seen by autoHideForGame
-	recentOcr    []OcrFrame // the last ~10 s of OCR, written to the miss log on a manual +1
+	lastFg       win.HWND // foreground window last seen by autoHideForGame
 
-	translation  translationState
 	navDeath     *walk.PushButton
 	navTranslate *walk.PushButton
 	navNormal    *walk.Font
@@ -120,7 +77,6 @@ type App struct {
 	fontCB     *walk.ComboBox
 	presetCB   *walk.ComboBox
 	presetLbl  *walk.TextLabel
-	presets    []Preset
 
 	langCB      *walk.ComboBox
 	ocrLangs    []OcrLang
@@ -137,36 +93,22 @@ type App struct {
 	hpCB        *walk.CheckBox
 	hpLbl       *walk.Label
 	hpZoneLbl   *walk.Label
-	hpDet       *HPDeath
-	tracker     *BossTracker
-	curBoss     string
-	lastBossHit string
-	lastBossAt  time.Time
-	// deathNoBoss is when a death was counted before its boss was confirmed. In
-	// Souls games the name is often read cleanly only on the death screen.
-	deathNoBoss time.Time
-	// ocrProven: OCR has read this game's death text this session. From then on
-	// a template match alone does not count: templates of a dark death screen
-	// also match the dark respawn or a dimmed screenshot tool.
-	ocrProven bool
-	// loggedAway: the "game not in front" line was written to ocr-debug.log.
-	loggedAway bool
-	boldCB     *walk.CheckBox
-	colorSw    *walk.Composite
-	colorLbl   *walk.Label
-	outlineCB  *walk.CheckBox
-	outlineNE  *walk.NumberEdit
-	outlineSw  *walk.Composite
-	outlineLbl *walk.Label
-	urlLE      *walk.LineEdit
-	server     *OverlayServer
-	swBrushes  []*walk.SolidColorBrush
-	editPosPB  *walk.PushButton
-	volSlider  *walk.Slider
-	soundLbl   *walk.Label
-	ocrCB      *walk.CheckBox
-	ocrLbl     *walk.Label
-	kwLE       *walk.LineEdit
+	boldCB      *walk.CheckBox
+	colorSw     *walk.Composite
+	colorLbl    *walk.Label
+	outlineCB   *walk.CheckBox
+	outlineNE   *walk.NumberEdit
+	outlineSw   *walk.Composite
+	outlineLbl  *walk.Label
+	urlLE       *walk.LineEdit
+	server      *OverlayServer
+	swBrushes   []*walk.SolidColorBrush
+	editPosPB   *walk.PushButton
+	volSlider   *walk.Slider
+	soundLbl    *walk.Label
+	ocrCB       *walk.CheckBox
+	ocrLbl      *walk.Label
+	kwLE        *walk.LineEdit
 
 	overlay    *Overlay
 	sound      Sound
@@ -233,7 +175,8 @@ func main() {
 		}
 	}
 	dir, migrated, warn := dataDir()
-	a := &App{store: &Store{Dir: dir}, quit: make(chan struct{}), ocrAvailable: true, migrated: migrated, dirWarn: warn}
+	a := &App{Engine: Engine{store: &Store{Dir: dir}, quit: make(chan struct{}), ocrAvailable: true}, migrated: migrated, dirWarn: warn}
+	a.ui = a
 	a.cfg = a.store.LoadConfig()
 	a.monitors = ListMonitors()
 	if a.cfg.Monitor < 0 || a.cfg.Monitor >= len(a.monitors) {
@@ -668,7 +611,7 @@ func (a *App) init() {
 		a.hk.Stop()
 		a.overlay.Destroy()
 		a.bossOverlay.Destroy()
-		a.translation.subtitle.Destroy()
+		a.subtitle.Destroy()
 		a.server.Close()
 		a.sound.Close()
 		a.saveConfig()
@@ -693,7 +636,7 @@ func (a *App) init() {
 						a.bossOverlay.KeepOnTop()
 					}
 					if a.translation.on {
-						a.translation.subtitle.KeepOnTop()
+						a.subtitle.KeepOnTop()
 					}
 				})
 			}
@@ -701,297 +644,13 @@ func (a *App) init() {
 	}()
 }
 
-// ---------- capture loop ----------
-
-func (a *App) captureLoop() {
-	defer a.wg.Done()
-	// WinRT OCR objects live on this thread for its whole life.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	var ocr *OcrEngine
-	defer func() { ocr.Close() }()
-	ocrTried := false
-
-	interval := time.Duration(a.cfg.IntervalMs) * time.Millisecond
-	lastErr := ""
-	for {
-		select {
-		case <-a.quit:
-			return
-		case <-time.After(interval):
-		}
-		a.mu.Lock()
-		st := a.loop
-		a.mu.Unlock()
-		if !st.enabled {
-			continue
-		}
-		var newLangs []OcrLang
-		if st.ocr && (!ocrTried || (ocr != nil && ocr.Lang != st.ocrLang)) {
-			ocrTried = true
-			ocr.Close()
-			var err error
-			ocr, err = NewOcrEngine(st.ocrLang)
-			if err != nil {
-				ocr = nil
-				msg := err.Error()
-				a.mw.Synchronize(func() { a.onOcrUnavailable(msg) })
-				continue
-			}
-			newLangs = ocr.Langs
-		}
-
-		fr := frameResult{gen: st.gen, langs: newLangs, hpRaw: -1}
-		var err error
-		if (st.ocr && ocr != nil) || st.hp {
-			ow, oh := OcrSize(st.mon)
-			var big *image.RGBA
-			big, err = CaptureMonitorScaled(st.mon, ow, oh)
-			if err == nil {
-				fr.small = Downscale(big, CaptureW, CaptureH)
-				if st.ocr && ocr != nil {
-					fr.lines, fr.ocrErr = ocr.Recognize(big)
-					fr.ranOcr = true
-				}
-				if st.hp {
-					fr.hpRaw = MeasureHP(big, st.hpZone, st.hpColor)
-				}
-			}
-		} else {
-			fr.small, err = CaptureMonitor(st.mon)
-		}
-		if err == nil {
-			fr.black = IsBlack(fr.small)
-		}
-		if err != nil {
-			if err.Error() != lastErr {
-				lastErr = err.Error()
-				msg := err.Error()
-				a.mw.Synchronize(func() { a.setStatus("Lỗi chụp màn hình: " + msg) })
-			}
-			continue
-		}
-		lastErr = ""
-		if st.hasTemplates {
-			fr.feat = ExtractFeature(fr.small, st.roi)
-			fr.hasFeat = true
-		}
-		a.mw.Synchronize(func() { a.onFrame(fr) })
-	}
-}
-
-func (a *App) onOcrUnavailable(msg string) {
-	a.ocrAvailable = false
-	a.ocrInitErr = msg
-	a.ocrLbl.SetText("Không dùng được: " + msg + ". Vẫn dùng được F9 + ảnh mẫu.")
-	a.updateLoop()
-}
-
-// rememberOcr writes the frame to ocr-debug.log and keeps the last 10 seconds
-// for the miss log.
-func (a *App) rememberOcr(lines []OcrLine, now time.Time) {
-	var texts []string
-	for _, ln := range lines {
-		texts = append(texts, DescribeLine(ln))
-	}
-	// Only log frames of the game: a browser in front fills the log in minutes.
-	if inGame := isOtherFullscreen(win.GetForegroundWindow()); inGame {
-		a.store.AppendDebugLog("OCR  "+strings.Join(texts, " | "), now)
-		a.loggedAway = false
-	} else if !a.loggedAway {
-		a.store.AppendDebugLog("OCR  (game not in front: not logged until it is)", now)
-		a.loggedAway = true
-	}
-	a.recentOcr = append(a.recentOcr, OcrFrame{At: now, Lines: texts})
-	for len(a.recentOcr) > 0 && now.Sub(a.recentOcr[0].At) > 10*time.Second {
-		a.recentOcr = a.recentOcr[1:]
-	}
-}
-
-func describeOcr(lines []OcrLine, m OcrMatch, hit bool) string {
-	if hit {
-		return fmt.Sprintf("Thấy \"%s\" (cao %.1f%%) → KHỚP", m.Line, m.Height*100)
-	}
-	best, bh := "", 0.0
-	for _, ln := range lines {
-		for _, w := range ln.Words {
-			if w.H > bh {
-				bh, best = w.H, ln.Text
-			}
-		}
-	}
-	if best == "" {
-		return "Không thấy chữ"
-	}
-	r := []rune(best)
-	if len(r) > 40 {
-		best = string(r[:40]) + "…"
-	}
-	return fmt.Sprintf("Chữ lớn nhất \"%s\" (%.1f%%), không phải từ khóa", best, bh*100)
-}
-
-func (a *App) onFrame(fr frameResult) {
-	if fr.gen != a.gen || a.cur == nil {
-		return
-	}
-	now := time.Now()
-	sim, idx := 0.0, -1
-	if fr.hasFeat {
-		sim, idx = BestSimilarity(fr.feat, a.tmplFeats)
-		a.simLbl.SetText(fmt.Sprintf("%d%%  (ngưỡng %d%%)", int(sim*100), int(a.cur.Threshold*100)))
-	}
-	if fr.langs != nil {
-		a.setOcrLanguages(fr.langs)
-	}
-	if fr.hpRaw >= 0 && a.hpDet != nil {
-		ratio := a.hpDet.Ratio(fr.hpRaw)
-		if a.hpDet.Full > a.cur.HPFull*1.05 { // calibration grew: remember it
-			a.cur.HPFull = a.hpDet.Full
-			a.store.SaveProfile(a.cur)
-		}
-		switch {
-		case fr.black:
-			a.hpLbl.SetText("-- (màn hình đen)")
-		case ratio < 0:
-			a.hpLbl.SetText("-- (chưa thấy thanh máu)")
-		default:
-			a.hpLbl.SetText(fmt.Sprintf("%d%%", int(ratio*100+0.5)))
-		}
-		if a.hpDet.Feed(ratio, fr.black, now) && a.det.Trigger(now) {
-			a.addDeath(1, "hp")
-			a.setStatus(fmt.Sprintf("Tự đếm lúc %s (máu về 0 rồi màn hình tối). Đếm sai thì bấm %s.", now.Format("15:04:05"), a.cfg.Hotkeys.Sub))
-		}
-	}
-	var m OcrMatch
-	hit := false
-	if fr.ranOcr {
-		fr.lines = DropLinesInside(fr.lines, a.ownRects())
-		if fr.ocrErr == nil {
-			a.rememberOcr(fr.lines, now)
-		}
-		if fr.ocrErr != nil {
-			a.ocrLbl.SetText("Lỗi: " + fr.ocrErr.Error())
-		} else {
-			kw := EffectiveKeywords(a.cur, a.cfg.Keywords)
-			if a.cur.OcrEnabled {
-				m, hit = MatchDeath(fr.lines, kw, a.cfg.OcrMinHeight)
-				a.ocrLbl.SetText(describeOcr(fr.lines, m, hit))
-			}
-			// Boss names come from the game: skip frames where another window (a
-			// browser, chat) is in front, or its text becomes the "boss".
-			if a.cur.BossTrack && isOtherFullscreen(win.GetForegroundWindow()) {
-				own := []string{a.cur.Name, "Deaths", FormatObs(a.cfg.ObsFormat, a.cur.Name, a.cur.Deaths)}
-				a.tracker.Observe(WithoutNames(BossCandidates(fr.lines, a.bossZones(), kw), own), now)
-				b, _ := a.tracker.Current(now)
-				if b != a.curBoss {
-					a.curBoss = b
-					a.store.AppendDebugLog("BOSS "+b, now)
-					if b != "" && !a.deathNoBoss.IsZero() && now.Sub(a.deathNoBoss) <= 15*time.Second {
-						a.lastBossHit, a.lastBossAt = AddBossDeath(a.cur, b, 1), now
-						a.deathNoBoss = time.Time{}
-						a.store.SaveProfile(a.cur)
-						a.store.AppendDebugLog("BOSS credited the death just before: "+b, now)
-					}
-					a.refreshBosses()
-				}
-			}
-		}
-	}
-	eff := sim
-	if hit {
-		eff = 1
-		a.ocrProven = true
-	} else if a.ocrProven {
-		eff = 0
-	}
-	counted := false
-	if hit && StrongKeyword(m.Keyword) {
-		counted = a.det.FeedStrong(now)
-	} else {
-		counted = a.det.Feed(eff, now)
-	}
-	if !counted {
-		return
-	}
-	a.addDeath(1, "auto")
-	var why string
-	if hit {
-		why = fmt.Sprintf("đọc được chữ \"%s\"", m.Line)
-	} else {
-		why = fmt.Sprintf("giống mẫu #%d: %d%%", idx+1, int(sim*100))
-	}
-	msg := fmt.Sprintf("Tự đếm lúc %s (%s). Đếm sai thì bấm %s.", now.Format("15:04:05"), why, a.cfg.Hotkeys.Sub)
-	a.store.AppendDebugLog("WHY  "+why+", boss: "+a.lastBossHit, now)
-	if hit {
-		msg += a.learnFromOcr(fr.small, m, sim)
-	}
-	a.setStatus(msg)
-}
-
-// learnFromOcr turns an OCR-detected death into a template (and a tight ROI the
-// first time), so stylized frames OCR misreads later are still caught.
-func (a *App) learnFromOcr(small *image.RGBA, m OcrMatch, sim float64) string {
-	if small == nil || (len(a.tmplFeats) > 0 && sim >= a.cur.Threshold) {
-		return ""
-	}
-	note := ""
-	if a.cur.ROI.IsFull() {
-		a.cur.ROI = AutoROI(m.Box)
-		a.store.SaveProfile(a.cur)
-		a.refreshROILabel()
-		note = " Đã tự khoanh vùng quanh chữ."
-	}
-	if _, err := a.store.AddTemplate(a.cur, small, time.Now()); err != nil {
-		return " (không lưu được ảnh mẫu: " + err.Error() + ")"
-	}
-	a.reloadTemplates()
-	return fmt.Sprintf(" Tự học: đã lưu ảnh mẫu %d/%d.%s", len(a.cur.Templates), MaxTemplates, note)
-}
-
-func (a *App) updateLoop() {
-	a.gen++
-	st := loopState{gen: a.gen}
-	if a.cur != nil {
-		st.hasTemplates = len(a.tmplFeats) > 0
-		st.ocr = (a.cur.OcrEnabled || a.cur.BossTrack) && a.ocrAvailable
-		st.ocrLang = a.cur.OcrLang
-		st.hp = a.cur.HPEnabled && a.cur.HPColor.Valid()
-		st.hpZone, st.hpColor = a.cur.HPZone, a.cur.HPColor
-		st.enabled = a.cur.AutoEnabled && (st.hasTemplates || st.ocr || st.hp)
-		st.roi = a.cur.ROI
-	}
-	if a.cfg.Monitor >= 0 && a.cfg.Monitor < len(a.monitors) {
-		st.mon = a.monitors[a.cfg.Monitor]
-	} else if len(a.monitors) > 0 {
-		st.mon = a.monitors[0]
-	}
-	a.mu.Lock()
-	a.loop = st
-	a.mu.Unlock()
-	if a.cur == nil {
-		return
-	}
-	if !st.hasTemplates {
-		a.simLbl.SetText("-- (chưa có mẫu, sẽ tự học khi OCR bắt được)")
-	}
-	switch {
-	case !a.cur.AutoEnabled:
-		a.simLbl.SetText("-- (tự nhận diện đang tắt)")
-		a.ocrLbl.SetText("--")
-	case !a.ocrAvailable && a.ocrInitErr != "":
-		// keep the error text set by onOcrUnavailable
-	case !a.cur.OcrEnabled:
-		a.ocrLbl.SetText("Đang tắt")
-	case !st.enabled:
-		a.ocrLbl.SetText("--")
-	}
-}
+// ---------- windows on screen ----------
 
 // ownRects returns the app's visible windows (main window, overlay, boss panel)
 // normalized to the game monitor, so OCR can ignore the app's own text.
 func (a *App) ownRects() []ROI {
 	mon := a.currentMonitor().Rect
-	mw, mh := float64(mon.Right-mon.Left), float64(mon.Bottom-mon.Top)
+	mw, mh := float64(mon.R-mon.L), float64(mon.B-mon.T)
 	hwnds := []win.HWND{a.mw.Handle()}
 	if a.overlay != nil {
 		hwnds = append(hwnds, a.overlay.hwnd)
@@ -999,7 +658,7 @@ func (a *App) ownRects() []ROI {
 	if a.bossOverlay != nil {
 		hwnds = append(hwnds, a.bossOverlay.hwnd)
 	}
-	if s := a.translation.subtitle; s != nil {
+	if s := a.subtitle; s != nil {
 		hwnds = append(hwnds, s.hwnd)
 	}
 	var out []ROI
@@ -1010,7 +669,7 @@ func (a *App) ownRects() []ROI {
 		var r win.RECT
 		win.GetWindowRect(h, &r)
 		out = append(out, ROI{
-			X: float64(r.Left-mon.Left) / mw, Y: float64(r.Top-mon.Top) / mh,
+			X: float64(r.Left-mon.L) / mw, Y: float64(r.Top-mon.T) / mh,
 			W: float64(r.Right-r.Left) / mw, H: float64(r.Bottom-r.Top) / mh,
 		})
 	}
@@ -1059,13 +718,6 @@ func isOtherFullscreen(h win.HWND) bool {
 	}
 	m := mi.RcMonitor
 	return r.Left <= m.Left && r.Top <= m.Top && r.Right >= m.Right && r.Bottom >= m.Bottom
-}
-
-func (a *App) currentMonitor() Monitor {
-	if a.cfg.Monitor >= 0 && a.cfg.Monitor < len(a.monitors) {
-		return a.monitors[a.cfg.Monitor]
-	}
-	return a.monitors[0]
 }
 
 // ---------- hotkeys ----------
@@ -1132,41 +784,6 @@ func (a *App) onHotkey(act HotkeyAction) {
 }
 
 // ---------- counting ----------
-
-func (a *App) addDeath(delta int, source string) {
-	if a.cur == nil {
-		return
-	}
-	if a.cur.Deaths+delta < 0 {
-		return
-	}
-	a.cur.Deaths += delta
-	a.store.AppendDebugLog(fmt.Sprintf("COUNT %+d %s (total %d)", delta, source, a.cur.Deaths), time.Now())
-	if delta > 0 && a.cfg.Sound {
-		a.playSound()
-	}
-	if a.cur.BossTrack && a.tracker != nil {
-		now := time.Now()
-		if delta > 0 {
-			a.lastBossHit, a.deathNoBoss = "", now
-			if b, ok := a.tracker.Current(now); ok {
-				a.lastBossHit = AddBossDeath(a.cur, b, 1)
-				a.lastBossAt = now
-				a.deathNoBoss = time.Time{}
-			}
-		} else {
-			a.deathNoBoss = time.Time{} // a −1 cancels a pending late boss credit
-			if a.lastBossHit != "" && now.Sub(a.lastBossAt) < 3*time.Minute {
-				AddBossDeath(a.cur, a.lastBossHit, -1) // undo the boss credit with the −1
-				a.lastBossHit = ""
-			}
-		}
-	}
-	a.store.SaveProfile(a.cur)
-	a.store.AppendHistory(time.Now(), a.cur.Name, delta, a.cur.Deaths, source)
-	a.refreshCount()
-	a.refreshBosses()
-}
 
 func (a *App) refreshCount() {
 	if a.cur == nil {
@@ -1240,15 +857,6 @@ func (a *App) removeTemplate() {
 	a.store.RemoveTemplate(a.cur, i)
 	a.reloadTemplates()
 	a.setStatus("Đã xóa mẫu.")
-}
-
-func templateLabel(i int, name string) string {
-	var d, t string
-	var ms int
-	if n, _ := fmt.Sscanf(strings.TrimSuffix(name, ".png"), "death_%8s_%6s_%d", &d, &t, &ms); n >= 2 && len(d) == 8 && len(t) == 6 {
-		return fmt.Sprintf("#%d  %s/%s %s:%s:%s", i+1, d[6:8], d[4:6], t[0:2], t[2:4], t[4:6])
-	}
-	return fmt.Sprintf("#%d  %s", i+1, name)
 }
 
 func (a *App) reloadTemplates() {
@@ -1818,7 +1426,7 @@ func colorIndex(name string) int {
 func (a *App) monitorRects() [][4]int32 {
 	var rs [][4]int32
 	for _, m := range a.monitors {
-		rs = append(rs, [4]int32{m.Rect.Left, m.Rect.Top, m.Rect.Right, m.Rect.Bottom})
+		rs = append(rs, [4]int32{m.Rect.L, m.Rect.T, m.Rect.R, m.Rect.B})
 	}
 	return rs
 }
@@ -2098,15 +1706,6 @@ func (a *App) presetNames() []string {
 	return names
 }
 
-func (a *App) presetIndex(name string) int {
-	for i, p := range a.presets {
-		if p.Game == name {
-			return i
-		}
-	}
-	return -1
-}
-
 // refreshKeywordsUI syncs the preset combo, keyword box and hint with the profile.
 func (a *App) refreshKeywordsUI() {
 	if a.cur == nil || a.presetCB == nil {
@@ -2193,28 +1792,6 @@ func (a *App) onLangChanged() {
 }
 
 // ---------- boss tracking ----------
-
-// bossZones: the user's region, else the game preset's, else the defaults.
-func (a *App) bossZones() []ROI {
-	if a.cur != nil && a.cur.BossROI.W > 0 && a.cur.BossROI.H > 0 {
-		return []ROI{a.cur.BossROI.Normalized()}
-	}
-	if z := a.presetBossZone(); z != nil {
-		return []ROI{*z}
-	}
-	return DefaultBossZones
-}
-
-func (a *App) presetBossZone() *ROI {
-	if a.cur == nil {
-		return nil
-	}
-	if i := a.presetIndex(a.cur.Preset); i >= 0 && a.presets[i].BossZone != nil {
-		z := a.presets[i].BossZone.Normalized()
-		return &z
-	}
-	return nil
-}
 
 func (a *App) refreshBossZoneLabel() {
 	if a.cur == nil || a.bossZoneLbl == nil {
@@ -2443,7 +2020,7 @@ func (a *App) defaultPanelPos() (int32, int32) {
 		return 50, 50
 	}
 	r := a.monitors[0].Rect
-	return r.Right - int32(a.cfg.BossPanelFontSize*22) - 40, r.Top + 40
+	return r.R - int32(a.cfg.BossPanelFontSize*22) - 40, r.T + 40
 }
 
 func (a *App) onPanelEnabledChanged() {

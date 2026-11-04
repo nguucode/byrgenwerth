@@ -5,6 +5,7 @@ package main
 // itself. Bound to 127.0.0.1 only.
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -38,6 +39,7 @@ type OverlayServer struct {
 	splits SplitsState
 	ln     net.Listener
 	srv    *http.Server
+	mux    *http.ServeMux
 }
 
 // StartOverlayServer listens on 127.0.0.1, trying port..port+20.
@@ -56,6 +58,7 @@ func StartOverlayServer(port int) (*OverlayServer, error) {
 	}
 	s.ln = ln
 	mux := http.NewServeMux()
+	s.mux = mux
 	mux.HandleFunc("/", s.handlePage)
 	mux.HandleFunc("/state", s.handleState)
 	mux.HandleFunc("/bosses", s.handleBossPage)
@@ -135,6 +138,28 @@ function tick(){
 }
 tick();
 </script></body></html>`
+
+// RequireToken guards the control API of the macOS app. The custom header keeps
+// other websites out, since a browser will not send it across origins without a
+// preflight nobody answers. The Host check stops DNS rebinding.
+func RequireToken(token string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		host, _, _ := net.SplitHostPort(r.Host)
+		if host != "127.0.0.1" {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		got := r.Header.Get("X-Token")
+		if got == "" && r.Method == http.MethodGet {
+			got = r.URL.Query().Get("t") // <img> tags cannot set a header
+		}
+		if subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
 
 func (s *OverlayServer) SetSplits(st SplitsState) {
 	if s == nil {
