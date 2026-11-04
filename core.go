@@ -252,6 +252,9 @@ type Hotkeys struct {
 	Capture string `json:"capture"`
 	Toggle  string `json:"toggle"`
 	Window  string `json:"window"`
+
+	TranslateToggle string `json:"translate_toggle"`
+	TranslateRegion string `json:"translate_region"`
 }
 
 type Config struct {
@@ -290,6 +293,9 @@ type Config struct {
 
 	Keywords     []string `json:"keywords"`
 	OcrMinHeight float64  `json:"ocr_min_height"` // min text height, fraction of screen height
+
+	TranslateROI      ROI `json:"translate_roi"` // zero until the user picks a region
+	TranslateFontSize int `json:"translate_font_size"`
 }
 
 // DefaultKeywords are common death-screen phrases across games.
@@ -310,7 +316,7 @@ func DefaultConfig() Config {
 		IntervalMs:  400,
 		Sound:       true,
 		ObsFormat:   "Deaths: {count}",
-		Hotkeys:     Hotkeys{Add: "F9", Sub: "F10", Capture: "F11", Toggle: "F8", Window: "F7"},
+		Hotkeys:     Hotkeys{Add: "F9", Sub: "F10", Capture: "F11", Toggle: "F8", Window: "F7", TranslateToggle: "Ctrl+Alt+T", TranslateRegion: "Ctrl+Alt+R"},
 
 		ObsEnabled:      true,
 		OverlayFontSize: 40,
@@ -326,6 +332,7 @@ func DefaultConfig() Config {
 		ServerPort:   17321,
 
 		BossPanelFontSize: 18,
+		TranslateFontSize: 28,
 
 		Keywords:     append([]string(nil), DefaultKeywords...),
 		OcrMinHeight: 0.025,
@@ -488,6 +495,9 @@ func (s *Store) LoadConfig() Config {
 	if c.BossPanelFontSize < 10 || c.BossPanelFontSize > 80 {
 		c.BossPanelFontSize = d.BossPanelFontSize
 	}
+	if c.TranslateFontSize < 10 || c.TranslateFontSize > 120 {
+		c.TranslateFontSize = d.TranslateFontSize
+	}
 	if c.ServerPort < 1024 || c.ServerPort > 65000 {
 		c.ServerPort = d.ServerPort
 	}
@@ -503,6 +513,12 @@ func (s *Store) LoadConfig() Config {
 	}
 	if c.IntervalMs < 100 {
 		c.IntervalMs = d.IntervalMs
+	}
+	if c.Hotkeys.TranslateToggle == "" {
+		c.Hotkeys.TranslateToggle = d.Hotkeys.TranslateToggle
+	}
+	if c.Hotkeys.TranslateRegion == "" {
+		c.Hotkeys.TranslateRegion = d.Hotkeys.TranslateRegion
 	}
 	if c.Hotkeys.Add == "" {
 		c.Hotkeys.Add = d.Hotkeys.Add
@@ -806,6 +822,28 @@ func OutlineOffsets(r int) [][2]int {
 				out = append(out, [2]int{dx, dy})
 			}
 		}
+	}
+	return out
+}
+
+// ComposeSubtitle paints the translation box: text and note over a dark
+// translucent background. dim marks a line whose next translation is on its way.
+func ComposeSubtitle(text, note []uint8, dim bool) []byte {
+	const boxA = 0.86
+	box, fg, muted := RGB{17, 17, 19}, RGB{238, 238, 240}, RGB{181, 178, 188}
+	out := make([]byte, len(text)*4)
+	for i := range text {
+		ta := float64(text[i]) / 255
+		if dim {
+			ta *= 0.55
+		}
+		na := float64(note[i]) / 255 * (1 - ta)
+		rest := boxA * (1 - ta - na)
+		mix := func(t, n, b uint8) byte { return byte(float64(t)*ta + float64(n)*na + float64(b)*rest + 0.5) }
+		out[i*4+0] = mix(fg.B, muted.B, box.B)
+		out[i*4+1] = mix(fg.G, muted.G, box.G)
+		out[i*4+2] = mix(fg.R, muted.R, box.R)
+		out[i*4+3] = byte((ta+na+rest)*255 + 0.5)
 	}
 	return out
 }
@@ -1194,10 +1232,16 @@ func MigrateLegacyData(src, dst string) (bool, error) {
 
 // ---------- custom data folder ----------
 
+// version is set with -ldflags "-X main.version=..." when a release is built.
+var version = "0.0.0"
+
+// apiKeyFile holds the user's Anthropic API key, encrypted with their Windows account.
+const apiKeyFile = "translate.key"
+
 // dataPointerFile lives in the default folder and holds the user's chosen folder.
 const dataPointerFile = "datadir.txt"
 
-// DirHasData reports whether dir already holds Death Counter data.
+// DirHasData reports whether dir already holds app data.
 func DirHasData(dir string) bool {
 	if ents, err := os.ReadDir(filepath.Join(dir, "profiles")); err == nil && len(ents) > 0 {
 		return true
@@ -1245,6 +1289,23 @@ func CopyDataDir(src, dst string) error {
 	})
 }
 
+// dataDirName sits next to the exe. legacyDataDirName is its name before the app
+// became Byrgenwerth.
+const (
+	dataDirName       = "ByrgenwerthData"
+	legacyDataDirName = "DeathCounterData"
+)
+
+// AdoptLegacyDataDir renames the data folder left by Death Counter, unless the
+// new one already exists.
+func AdoptLegacyDataDir(exeDir string) bool {
+	dst := filepath.Join(exeDir, dataDirName)
+	if _, err := os.Stat(dst); err == nil {
+		return false
+	}
+	return os.Rename(filepath.Join(exeDir, legacyDataDirName), dst) == nil
+}
+
 // LegacyDataDirs lists where versions before 0.9 kept data, newest first: the
 // custom folder %APPDATA%\\DeathCounter\\datadir.txt pointed to, then appData itself.
 func LegacyDataDirs(appData string) []string {
@@ -1257,10 +1318,10 @@ func LegacyDataDirs(appData string) []string {
 	return append(dirs, appData)
 }
 
-// appDataFiles are the entries Death Counter writes into a data folder.
-var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", "ocr-misses.log", "ocr-debug.log", "ocr-debug.old.log", dataPointerFile}
+// appDataFiles are the entries the app writes into a data folder.
+var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", "ocr-misses.log", "ocr-debug.log", "ocr-debug.old.log", apiKeyFile, dataPointerFile}
 
-// RemoveAppData deletes Death Counter's own files from dir and then dir itself if
+// RemoveAppData deletes the app's own files from dir and then dir itself if
 // it is left empty, so a folder shared with other files keeps them.
 func RemoveAppData(dir string) error {
 	var firstErr error

@@ -13,7 +13,7 @@ var (
 	procUpdateLayeredWindow = user32.NewProc("UpdateLayeredWindow")
 	procLoadCursorW         = user32.NewProc("LoadCursorW")
 	overlays                = map[win.HWND]*Overlay{}
-	overlayClassName, _     = syscall.UTF16PtrFromString("DeathCounterOverlay")
+	overlayClassName, _     = syscall.UTF16PtrFromString("ByrgenwerthOverlay")
 	overlayClassRegistered  bool
 	overlayWndProc          = syscall.NewCallback(func(hwndp, msgp, wp, lp uintptr) uintptr {
 		hwnd, msg := win.HWND(hwndp), uint32(msgp)
@@ -52,7 +52,8 @@ type Overlay struct {
 	Color        RGB
 	OutlineWidth int // 0 = no outline
 	OutlineColor RGB
-	Splits       *SplitsState // when set, draws the speedrun-style boss panel instead of Text
+	Splits       *SplitsState   // when set, draws the speedrun-style boss panel instead of Text
+	Subtitle     *SubtitleState // when set, draws the translation box instead of Text
 	editing      bool
 	OnMoved      func(x, y int32)
 }
@@ -77,7 +78,7 @@ func NewOverlay(x, y int32) (*Overlay, error) {
 		}
 		overlayClassRegistered = true
 	}
-	title, _ := syscall.UTF16PtrFromString("Death Counter Overlay")
+	title, _ := syscall.UTF16PtrFromString("Byrgenwerth Overlay")
 	o := &Overlay{X: x, Y: y, FontSize: 40, FontFamily: "Segoe UI", Bold: true, Color: RGB{255, 255, 255}, OutlineWidth: 3}
 	o.hwnd = win.CreateWindowEx(exBase|exClickTh, overlayClassName, title, win.WS_POPUP,
 		x, y, 10, 10, 0, 0, hinst, nil)
@@ -146,6 +147,10 @@ func (o *Overlay) Render() {
 	}
 	if o.Splits != nil {
 		o.renderPanel()
+		return
+	}
+	if o.Subtitle != nil {
+		o.renderSubtitle()
 		return
 	}
 	text := o.Text

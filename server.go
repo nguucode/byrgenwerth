@@ -110,7 +110,7 @@ func (s *OverlayServer) handlePage(w http.ResponseWriter, r *http.Request) {
 // The outline is a stroked copy behind the fill, so it grows outward and never
 // eats into the letters (same look as the native overlay).
 const overlayPage = `<!doctype html>
-<html><head><meta charset="utf-8"><title>Death Counter</title>
+<html><head><meta charset="utf-8"><title>Byrgenwerth</title>
 <style>
 html,body{margin:0;background:transparent;overflow:hidden}
 #w{position:relative;display:inline-block;white-space:pre;padding:8px;line-height:1.2}
@@ -200,7 +200,7 @@ function draw(s){
   p.style.textShadow=w?ring(w,s.outlineColor):'none';
   p.style.padding=(8+w)+'px';
   var hr='<div class="hr" style="box-shadow:'+(w?'0 0 0 '+w+'px '+s.outlineColor:'none')+'"></div>';
-  var h='<div class="t">'+esc(s.title||'Death Counter')+'</div>'+hr;
+  var h='<div class="t">'+esc(s.title||'Byrgenwerth')+'</div>'+hr;
   h+='<div class="l"><span>Deaths</span><span class="c">'+s.total+'</span></div>';
   if(s.rows.length)h+=hr;
   s.rows.forEach(function(r){

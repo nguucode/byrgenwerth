@@ -1,4 +1,4 @@
-# Death Counter user guide
+# Byrgenwerth user guide
 
 [Tiếng Việt](huong-dan-su-dung.md) · [Back to README](../README.md)
 
@@ -16,6 +16,7 @@ The app's interface is in Vietnamese. This guide gives each label in Vietnamese 
 8. [Hotkeys](#8-hotkeys)
 9. [Where data is stored](#9-where-data-is-stored)
 10. [Troubleshooting](#10-troubleshooting)
+11. [Translate tab: real-time dialogue translation](#11-translate-tab-real-time-dialogue-translation)
 
 ---
 
@@ -27,16 +28,18 @@ Open **PowerShell** (Start menu → type "PowerShell") and run:
 irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
 ```
 
-- **First time** it asks for an install folder; press Enter for `%LOCALAPPDATA%\Programs\DeathCounter`. If the folder you type is not named `DeathCounter`, a `DeathCounter` folder is created inside it. The app and all its data live there.
-- It adds **Death Counter** to the Start menu and to Windows *Apps & features*, then starts the app.
-- **Update**: run the same command again. It closes the app, replaces the exe in the same folder and keeps your data.
-- On first launch Windows may ask for **network permission**: the app serves a local page on `127.0.0.1` for OBS. It never goes to the internet. Allow it.
+- **First time** it asks for an install folder; press Enter for `%LOCALAPPDATA%\Programs\Byrgenwerth`. If the folder you type is not named `Byrgenwerth`, a `Byrgenwerth` folder is created inside it. The app and all its data live there.
+- It adds **Byrgenwerth** to the Start menu and to Windows *Apps & features*, then starts the app.
+- **Update**: run the same command again. It closes the app, replaces the exe in the same folder and keeps your data. An existing Death Counter install is renamed to Byrgenwerth, with its counts and settings. In OBS, update the path of the text file if you use it.
+- On first launch Windows may ask for **network permission**: the app serves a local page on `127.0.0.1` for OBS. That page stays on your PC. Allow it. Only the Translate tab goes to the internet, and only while it is on.
 
-Manual install: download `DeathCounter.exe` from [Releases](https://github.com/nguucode/death-counter/releases/latest) into a folder you can write to (not `C:\Program Files`). SmartScreen may warn because the exe is not code-signed: *More info → Run anyway*. Updates are then manual too.
+Manual install: download `Byrgenwerth.exe` from [Releases](https://github.com/nguucode/death-counter/releases/latest) into a folder you can write to (not `C:\Program Files`). SmartScreen may warn because the exe is not code-signed: *More info → Run anyway*. Updates are then manual too.
 
 Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, Windows blocks screen capture and the overlay is hidden.
 
 ## 2. Main window
+
+The header shows the app name and version. **Death count** and **Translate** switch between the two tools. The items below belong to Death count; see [section 11](#11-translate-tab-real-time-dialogue-translation) for Translate.
 
 - **Game**: the game you are playing. Each game has its own count, templates, keywords and boss stats.
 - **Số lần chết** (deaths): the big red number, with **+1**, **−1** and **Reset** buttons.
@@ -155,20 +158,20 @@ Plays on every +1 (automatic, F9 or button), not on −1. **Bỏ âm thanh** rem
 
 ### Data folder
 
-Data lives in `DeathCounterData` next to `DeathCounter.exe`, so the app folder holds everything. **Mở** (open) shows it in Explorer.
+Data lives in `ByrgenwerthData` next to `Byrgenwerth.exe`, so the app folder holds everything. **Mở** (open) shows it in Explorer.
 
-- Coming from 0.8 or older, where data was in `%APPDATA%\DeathCounter` or a folder you picked: the first launch copies it over once. The old copy stays until you uninstall.
-- If the app folder is not writable, data goes to `%APPDATA%\DeathCounter` for now and the app tells you. Reinstall into a folder you own.
+- Coming from Death Counter, `DeathCounterData` is renamed on the first launch. Coming from 0.8 or older, where data was in `%APPDATA%\DeathCounter` or a folder you picked: the first launch copies it over once. The old copy stays until you uninstall.
+- If the app folder is not writable, data goes to `%APPDATA%\Byrgenwerth` for now and the app tells you. Reinstall into a folder you own.
 
 ### Uninstall
 
-Click **Gỡ Death Counter...** (uninstall) in this tab, or use Windows *Settings → Apps → Death Counter → Uninstall*. After you confirm, it deletes:
+Click **Gỡ Byrgenwerth...** (uninstall) in this tab, or use Windows *Settings → Apps → Byrgenwerth → Uninstall*. After you confirm, it deletes:
 
-- all data: `DeathCounterData`, plus `%APPDATA%\DeathCounter` and the folder you picked in older versions (only Death Counter's own files there, nothing else),
-- `DeathCounter.exe`, and the install folder when it is left empty,
+- all data, including your API key: `ByrgenwerthData`, `%APPDATA%\Byrgenwerth`, plus `%APPDATA%\DeathCounter` and the folder you picked in older versions (only the app's own files there, nothing else),
+- `Byrgenwerth.exe`, and the install folder when it is left empty,
 - the Start menu shortcut and the *Apps & features* entry.
 
-It cannot be undone. To keep your counts, copy `DeathCounterData` somewhere first.
+It cannot be undone. To keep your counts, copy `ByrgenwerthData` somewhere first.
 
 ## 7. Boss tab: top 3 bosses
 
@@ -203,13 +206,15 @@ It cannot be undone. To keep your counts, copy `DeathCounterData` somewhere firs
 | F11 | Save a template only, no count. |
 | F8 | Toggle automatic detection. |
 | F7 | Hide/show the app window (also brings it back after it minimized for a game). Detection, overlay and OBS keep running. |
+| Ctrl+Alt+T | Turn translation on or off. |
+| Ctrl+Alt+R | Draw the dialogue region for translation again. |
 
 Hotkeys work while in game; the game won't receive these keys.
 To change them, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and restart the app.
 
 ## 9. Where data is stored
 
-In `DeathCounterData` next to `DeathCounter.exe` (button **Mở** in the Cài đặt tab):
+In `ByrgenwerthData` next to `Byrgenwerth.exe` (button **Mở** in the Cài đặt tab):
 
 | File | Content |
 |---|---|
@@ -219,6 +224,7 @@ In `DeathCounterData` next to `DeathCounter.exe` (button **Mở** in the Cài đ
 | `history.csv` | Log of every +1/−1, opens in Excel. |
 | `obs_deaths.txt` | Text file for OBS (if enabled). |
 | `ocr-debug.log` | Every OCR read while a full-screen game is in front (text, position, height), every count and every boss change. Moved to `ocr-debug.old.log` at 4 MB. Send it with a bug report. |
+| `translate.key` | Your Anthropic API key, encrypted with your Windows account. |
 | `ocr-misses.log` | What OCR read in the 10 seconds before each F9 +1, i.e. deaths the app missed. Send it with a bug report. |
 
 Back up by copying the whole folder.
@@ -257,3 +263,21 @@ The game is in exclusive fullscreen. Switch to Borderless.
 ### OBS shows nothing
 - The app must be running.
 - The port may differ from 17321 if it was busy; always copy the URL from the app.
+
+## 11. Translate tab: real-time dialogue translation
+
+The app reads the dialogue region of your game and shows a Vietnamese translation in a box right next to it. English to Vietnamese only.
+
+1. Get an API key at [console.anthropic.com](https://console.anthropic.com) and paste it into **API key**. You pay Anthropic for what you use; **Chi phí ước tính** (estimated cost) adds up from token counts and list prices. It restarts when you change the key or the game.
+2. Open the game, press **Ctrl+Alt+R** and drag over the dialogue box. A tighter region costs less and misreads less. Pressing the shortcut in the game also works; so does **Khoanh vùng...** in the tab.
+3. Tick **Bật dịch** (translate on) or press **Ctrl+Alt+T**. It always starts off, so nothing is sent until you turn it on.
+
+Good to know:
+
+- **What leaves your PC**: the text OCR reads in the region, the 8 lines before it and the current game's name go to Anthropic's API (`claude-haiku-5-5`). Screenshots do not, and neither does anything outside the region.
+- **The key** is encrypted with your Windows account (DPAPI) in `translate.key`. Uninstalling deletes it.
+- A line is translated once the text has stopped changing, so typewriter text waits until it finishes. Repeated lines come from a cache and cost nothing.
+- On an error the box shows the English line and the reason. More than 500 characters in the region is refused: draw a tighter region.
+- English OCR must be installed in Windows: *Settings → Time & language → Language & region*.
+- The game must run **Borderless** or **Windowed**, or the box cannot show over it.
+- Translation is new and has not been tried on a real game yet. Expect rough edges.

@@ -22,6 +22,8 @@ import (
 	"github.com/lxn/win"
 )
 
+const newProfileName = "Game mới"
+
 //go:embed icon.png
 var iconPNG []byte
 
@@ -75,6 +77,21 @@ type App struct {
 	uninstalling bool
 	lastFg       win.HWND   // foreground window last seen by autoHideForGame
 	recentOcr    []OcrFrame // the last ~10 s of OCR, written to the miss log on a manual +1
+
+	translation  translationState
+	navDeath     *walk.PushButton
+	navTranslate *walk.PushButton
+	navNormal    *walk.Font
+	navBold      *walk.Font
+	deathPage    *walk.Composite
+	transPage    *walk.Composite
+	trOnCB       *walk.CheckBox
+	trRegionLbl  *walk.Label
+	trKeyLE      *walk.LineEdit
+	trFontNE     *walk.NumberEdit
+	trSrcLbl     *walk.TextLabel
+	trDstLbl     *walk.TextLabel
+	trCostLbl    *walk.Label
 
 	hk       *HotkeyManager
 	hkErrors []string
@@ -158,38 +175,54 @@ type App struct {
 	previewBmp *walk.Bitmap
 }
 
-// appDataDir is %APPDATA%\\DeathCounter, where versions before 0.9 kept data.
-// It is now only a fallback when the app folder is not writable.
-func appDataDir() string {
+func roamingDir() string {
 	base := os.Getenv("APPDATA")
 	if base == "" {
 		if h, err := os.UserHomeDir(); err == nil {
 			base = filepath.Join(h, "AppData", "Roaming")
 		}
 	}
-	return filepath.Join(base, "DeathCounter")
+	return base
 }
 
-// dataDir is "DeathCounterData" next to the exe, so the app folder holds
-// everything. Data from older versions is copied over once.
+// appDataDir is only a fallback when the app folder is not writable.
+func appDataDir() string { return filepath.Join(roamingDir(), "Byrgenwerth") }
+
+// legacyAppDataDir is where versions before 0.9 kept data.
+func legacyAppDataDir() string { return filepath.Join(roamingDir(), "DeathCounter") }
+
+// dataDir is "ByrgenwerthData" next to the exe, so the app folder holds
+// everything. Data from older versions is taken over once.
 func dataDir() (dir string, migrated bool, warn string) {
 	appData := appDataDir()
 	dir = appData
 	if exe, err := os.Executable(); err == nil {
-		dir = filepath.Join(filepath.Dir(exe), "DeathCounterData")
+		exeDir := filepath.Dir(exe)
+		migrated = AdoptLegacyDataDir(exeDir)
+		dir = filepath.Join(exeDir, dataDirName)
+		// The rename failed, perhaps a locked file: keep using the old folder for now.
+		if _, err := os.Stat(dir); err != nil {
+			if old := filepath.Join(exeDir, legacyDataDirName); DirHasData(old) {
+				dir = old
+			}
+		}
 	}
 	if err := CheckWritable(dir); err != nil {
 		warn = "Không ghi được dữ liệu vào " + dir + " (" + err.Error() + "). Đang tạm lưu ở " + appData +
 			". Hãy cài app vào thư mục bạn có quyền ghi (ví dụ không phải C:\\Program Files)."
 		os.MkdirAll(appData, 0o755)
-		return appData, false, warn
+		dir = appData
 	}
-	for _, src := range LegacyDataDirs(appData) {
+	// appData first: a fallback copy from a folder that was not writable is newest.
+	for _, src := range append([]string{appData}, LegacyDataDirs(legacyAppDataDir())...) {
+		if src == dir {
+			continue
+		}
 		if ok, _ := MigrateLegacyData(src, dir); ok {
-			return dir, true, ""
+			return dir, true, warn
 		}
 	}
-	return dir, false, ""
+	return dir, migrated, warn
 }
 
 func main() {
@@ -207,7 +240,7 @@ func main() {
 		a.cfg.Monitor = 0
 	}
 	if err := a.buildUI(); err != nil {
-		walk.MsgBox(nil, "Death Counter", "Lỗi tạo giao diện: "+err.Error(), walk.MsgBoxIconError)
+		walk.MsgBox(nil, "Byrgenwerth", "Lỗi tạo giao diện: "+err.Error(), walk.MsgBoxIconError)
 		return
 	}
 	a.init()
@@ -434,11 +467,11 @@ func (a *App) buildUI() error {
 					PushButton{Text: "Mở", OnClicked: a.openDataDir},
 				),
 			),
-			hint("Gồm số đếm, ảnh mẫu, thống kê boss, cài đặt. Nằm cạnh file DeathCounter.exe."),
+			hint("Gồm số đếm, ảnh mẫu, thống kê boss, cài đặt. Nằm cạnh file Byrgenwerth.exe."),
 			sep(),
 			title("Gỡ cài đặt"),
 			row(
-				PushButton{Text: "Gỡ Death Counter...", OnClicked: func() { runUninstall(a) }},
+				PushButton{Text: "Gỡ Byrgenwerth...", OnClicked: func() { runUninstall(a) }},
 				HSpacer{},
 			),
 			hint("Xóa app, toàn bộ dữ liệu, shortcut và mục trong Apps & features. Không hoàn tác được."),
@@ -507,42 +540,54 @@ func (a *App) buildUI() error {
 
 	return MainWindow{
 		AssignTo: &a.mw,
-		Title:    "Death Counter",
+		Title:    "Byrgenwerth",
 		Font:     uiFont,
-		Size:     Size{Width: 480, Height: 850},
+		Size:     Size{Width: 480, Height: 880},
 		MinSize:  Size{Width: 440, Height: 640},
 		Layout:   VBox{Margins: Margins{Left: 12, Top: 10, Right: 12, Bottom: 10}, Spacing: 8},
 		Children: []Widget{
-			title("Game"),
+			Label{Text: "Byrgenwerth v" + version, Font: Font{Family: "Segoe UI Semibold", PointSize: 13}},
 			row(
-				ComboBox{AssignTo: &a.profileCB, StretchFactor: 3, OnCurrentIndexChanged: a.onProfileChanged},
-				PushButton{Text: "+ Thêm", OnClicked: a.addProfile},
-				PushButton{Text: "Đổi tên", OnClicked: a.renameProfile},
-				PushButton{Text: "Xóa", OnClicked: a.deleteProfile},
-			),
-			sep(),
-			row(
-				Composite{
-					Layout: VBox{MarginsZero: true, SpacingZero: true},
-					Children: []Widget{
-						Label{Text: "Số lần chết", Font: titleFont},
-						Label{
-							AssignTo:  &a.countLbl,
-							Text:      "0",
-							Font:      Font{Family: "Segoe UI", PointSize: 36, Bold: true},
-							TextColor: walk.RGB(200, 30, 30),
-						},
-					},
-				},
+				PushButton{AssignTo: &a.navDeath, Text: "Death count", OnClicked: func() { a.showPage(false) }},
+				PushButton{AssignTo: &a.navTranslate, Text: "Translate", OnClicked: func() { a.showPage(true) }},
 				HSpacer{},
-				PushButton{Text: "+1", MinSize: Size{Width: 56}, OnClicked: func() { a.addDeath(1, "button") }},
-				PushButton{Text: "−1", MinSize: Size{Width: 56}, OnClicked: func() { a.addDeath(-1, "button") }},
-				PushButton{Text: "Reset", OnClicked: a.resetCount},
 			),
-			TabWidget{Pages: []TabPage{detectTab, displayTab, soundTab, bossTab}},
-			sep(),
+			Composite{
+				AssignTo: &a.deathPage,
+				Border:   true,
+				Layout:   VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}, Spacing: 8},
+				Children: []Widget{
+					row(
+						ComboBox{AssignTo: &a.profileCB, StretchFactor: 3, OnCurrentIndexChanged: a.onProfileChanged},
+						PushButton{Text: "+ Thêm", OnClicked: a.addProfile},
+						PushButton{Text: "Đổi tên", OnClicked: a.renameProfile},
+						PushButton{Text: "Xóa", OnClicked: a.deleteProfile},
+					),
+					sep(),
+					row(
+						Composite{
+							Layout: VBox{MarginsZero: true, SpacingZero: true},
+							Children: []Widget{
+								Label{Text: "Số lần chết", Font: titleFont},
+								Label{
+									AssignTo:  &a.countLbl,
+									Text:      "0",
+									Font:      Font{Family: "Segoe UI", PointSize: 30, Bold: true},
+									TextColor: walk.RGB(200, 30, 30),
+								},
+							},
+						},
+						HSpacer{},
+						PushButton{Text: "+1", MinSize: Size{Width: 56}, OnClicked: func() { a.addDeath(1, "button") }},
+						PushButton{Text: "−1", MinSize: Size{Width: 56}, OnClicked: func() { a.addDeath(-1, "button") }},
+						PushButton{Text: "Reset", OnClicked: a.resetCount},
+					),
+					TabWidget{Pages: []TabPage{detectTab, displayTab, soundTab, bossTab}},
+					Label{AssignTo: &a.hkLbl, Text: "", TextColor: hintColor},
+				},
+			},
+			a.translatePage(),
 			CheckBox{AssignTo: &a.topCB, Text: "Cửa sổ app luôn nằm trên", Checked: a.cfg.AlwaysOnTop, OnCheckedChanged: a.onTopChanged},
-			Label{AssignTo: &a.hkLbl, Text: "", TextColor: hintColor},
 			Label{AssignTo: &a.statusLbl, Text: "", EllipsisMode: EllipsisEnd},
 		},
 	}.Create()
@@ -571,6 +616,7 @@ func (a *App) init() {
 	a.outlineNE.SetEnabled(a.cfg.Outline)
 	a.initOverlay()
 	a.initBossPanel()
+	a.initTranslation()
 
 	var err error
 	a.profiles, err = a.store.LoadProfiles()
@@ -578,7 +624,7 @@ func (a *App) init() {
 		a.setStatus("Lỗi đọc dữ liệu: " + err.Error())
 	}
 	if len(a.profiles) == 0 {
-		if p, err := a.store.CreateProfile("Game mới"); err == nil {
+		if p, err := a.store.CreateProfile(newProfileName); err == nil {
 			a.profiles = []*Profile{p}
 		}
 	}
@@ -595,7 +641,8 @@ func (a *App) init() {
 	a.applyTopMost()
 
 	h := a.cfg.Hotkeys
-	keys := map[HotkeyAction]string{ActAdd: h.Add, ActSub: h.Sub, ActCapture: h.Capture, ActToggle: h.Toggle, ActWindow: h.Window}
+	keys := map[HotkeyAction]string{ActAdd: h.Add, ActSub: h.Sub, ActCapture: h.Capture, ActToggle: h.Toggle, ActWindow: h.Window,
+		ActTranslate: h.TranslateToggle, ActTranslateRegion: h.TranslateRegion}
 	a.hk, a.hkErrors = StartHotkeys(keys, func(act HotkeyAction) {
 		a.mw.Synchronize(func() { a.onHotkey(act) })
 	})
@@ -616,17 +663,20 @@ func (a *App) init() {
 	a.mw.Closing().Attach(func(canceled *bool, reason walk.CloseReason) {
 		a.mw.SetVisible(false) // vanish now; stopping the capture loop can take seconds
 		close(a.quit)
+		a.translation.cancel()
 		a.wg.Wait()
 		a.hk.Stop()
 		a.overlay.Destroy()
 		a.bossOverlay.Destroy()
+		a.translation.subtitle.Destroy()
 		a.server.Close()
 		a.sound.Close()
 		a.saveConfig()
 	})
 
-	a.wg.Add(2)
+	a.wg.Add(3)
 	go a.captureLoop()
+	go a.translateLoop()
 	go func() { // keep overlay above borderless games
 		defer a.wg.Done()
 		for {
@@ -641,6 +691,9 @@ func (a *App) init() {
 					}
 					if a.cfg.BossPanelEnabled && !a.bossOverlay.Editing() {
 						a.bossOverlay.KeepOnTop()
+					}
+					if a.translation.on {
+						a.translation.subtitle.KeepOnTop()
 					}
 				})
 			}
@@ -946,6 +999,9 @@ func (a *App) ownRects() []ROI {
 	if a.bossOverlay != nil {
 		hwnds = append(hwnds, a.bossOverlay.hwnd)
 	}
+	if s := a.translation.subtitle; s != nil {
+		hwnds = append(hwnds, s.hwnd)
+	}
 	var out []ROI
 	for _, h := range hwnds {
 		if h == 0 || !win.IsWindowVisible(h) || win.IsIconic(h) {
@@ -1014,17 +1070,31 @@ func (a *App) currentMonitor() Monitor {
 
 // ---------- hotkeys ----------
 
+func (a *App) bringToFront() {
+	h := a.mw.Handle()
+	a.mw.SetVisible(true)
+	win.ShowWindow(h, win.SW_RESTORE)
+	a.applyTopMost()
+	win.SetForegroundWindow(h)
+}
+
 func (a *App) onHotkey(act HotkeyAction) {
 	if act == ActWindow {
-		h := a.mw.Handle()
-		if a.mw.Visible() && !win.IsIconic(h) {
+		if a.mw.Visible() && !win.IsIconic(a.mw.Handle()) {
 			a.mw.SetVisible(false)
 			return
 		}
-		a.mw.SetVisible(true)
-		win.ShowWindow(h, win.SW_RESTORE)
-		a.applyTopMost()
-		win.SetForegroundWindow(h)
+		a.bringToFront()
+		return
+	}
+	if act == ActTranslate {
+		if !a.translation.picking {
+			a.trOnCB.SetChecked(!a.trOnCB.Checked())
+		}
+		return
+	}
+	if act == ActTranslateRegion {
+		a.editTranslateRegion()
 		return
 	}
 	if a.cur == nil {
@@ -1589,7 +1659,7 @@ func (a *App) deleteProfile() {
 	}
 	a.profiles = rest
 	if len(a.profiles) == 0 {
-		if p, err := a.store.CreateProfile("Game mới"); err == nil {
+		if p, err := a.store.CreateProfile(newProfileName); err == nil {
 			a.profiles = []*Profile{p}
 		}
 	}
@@ -1683,6 +1753,10 @@ func (a *App) onMonitorChanged() {
 	a.cfg.Monitor = i
 	a.saveConfig()
 	a.updateLoop()
+	if a.trRegionLbl != nil {
+		a.refreshTranslateRegionLabel()
+		a.syncTranslateLoop()
+	}
 }
 
 func (a *App) onObsFormatChanged() {

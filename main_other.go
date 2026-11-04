@@ -4,4 +4,4 @@ package main
 
 import "fmt"
 
-func main() { fmt.Println("Death Counter chỉ chạy trên Windows.") }
+func main() { fmt.Println("Byrgenwerth chỉ chạy trên Windows.") }

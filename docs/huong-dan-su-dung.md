@@ -1,4 +1,4 @@
-# Hướng dẫn sử dụng Death Counter
+# Hướng dẫn sử dụng Byrgenwerth
 
 [English](user-guide.md) · [Về trang chính](../README.md)
 
@@ -14,6 +14,7 @@
 8. [Phím tắt](#8-phím-tắt)
 9. [Dữ liệu được lưu ở đâu](#9-dữ-liệu-được-lưu-ở-đâu)
 10. [Xử lý sự cố](#10-xử-lý-sự-cố)
+11. [Tab Translate: dịch hội thoại theo thời gian thực](#11-tab-translate-dịch-hội-thoại-theo-thời-gian-thực)
 
 ---
 
@@ -25,16 +26,18 @@ Mở **PowerShell** (Start menu → gõ "PowerShell") rồi chạy:
 irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
 ```
 
-- **Lần đầu** script hỏi thư mục cài; bấm Enter để dùng `%LOCALAPPDATA%\Programs\DeathCounter`. Thư mục bạn gõ không tên là `DeathCounter` thì script tạo thư mục `DeathCounter` bên trong. App và toàn bộ dữ liệu nằm trong thư mục này.
-- Script thêm **Death Counter** vào Start menu và vào *Apps & features* của Windows, rồi mở app.
-- **Cập nhật**: chạy lại đúng lệnh đó. Script đóng app, thay file exe trong cùng thư mục, giữ nguyên dữ liệu.
-- Lần đầu mở app, Windows có thể **hỏi quyền mạng**: app mở một trang web nội bộ ở `127.0.0.1` để OBS đọc. Trang này chỉ chạy trong máy, không ra internet. Chọn cho phép.
+- **Lần đầu** script hỏi thư mục cài; bấm Enter để dùng `%LOCALAPPDATA%\Programs\Byrgenwerth`. Thư mục bạn gõ không tên là `Byrgenwerth` thì script tạo thư mục `Byrgenwerth` bên trong. App và toàn bộ dữ liệu nằm trong thư mục này.
+- Script thêm **Byrgenwerth** vào Start menu và vào *Apps & features* của Windows, rồi mở app.
+- **Cập nhật**: chạy lại đúng lệnh đó. Script đóng app, thay file exe trong cùng thư mục, giữ nguyên dữ liệu. Bản Death Counter đang cài sẽ được đổi tên thành Byrgenwerth, giữ nguyên số đếm và cài đặt. Nếu dùng file text trong OBS thì cập nhật lại đường dẫn.
+- Lần đầu mở app, Windows có thể **hỏi quyền mạng**: app mở một trang web nội bộ ở `127.0.0.1` để OBS đọc. Trang này chỉ chạy trong máy. Chọn cho phép. Chỉ tab Translate mới ra internet, và chỉ khi đang bật.
 
-Cài tay: tải `DeathCounter.exe` ở trang [Releases](https://github.com/nguucode/death-counter/releases/latest) vào thư mục bạn có quyền ghi (không phải `C:\Program Files`). SmartScreen có thể cảnh báo vì exe chưa ký số: *More info → Run anyway*. Khi đó cập nhật cũng phải làm tay.
+Cài tay: tải `Byrgenwerth.exe` ở trang [Releases](https://github.com/nguucode/death-counter/releases/latest) vào thư mục bạn có quyền ghi (không phải `C:\Program Files`). SmartScreen có thể cảnh báo vì exe chưa ký số: *More info → Run anyway*. Khi đó cập nhật cũng phải làm tay.
 
 Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclusive Fullscreen, Windows không cho app chụp màn hình game và overlay bị che.
 
 ## 2. Màn hình chính
+
+Đầu cửa sổ là tên app và phiên bản. Hai nút **Death count** và **Translate** chuyển giữa hai công cụ. Các mục dưới đây thuộc Death count; Translate xem [mục 11](#11-tab-translate-dịch-hội-thoại-theo-thời-gian-thực).
 
 - **Game**: chọn game đang chơi; mỗi game có số đếm, ảnh mẫu, từ khóa và thống kê boss riêng.
 - **Số lần chết**: số lớn màu đỏ. Các nút **+1**, **−1** và **Reset** để chỉnh tay.
@@ -153,20 +156,20 @@ App **không kèm sẵn âm thanh**.
 
 ### Dữ liệu
 
-Dữ liệu nằm trong thư mục `DeathCounterData` cạnh file `DeathCounter.exe`, nên thư mục app chứa tất cả. Nút **Mở** mở thư mục đó trong Explorer.
+Dữ liệu nằm trong thư mục `ByrgenwerthData` cạnh file `Byrgenwerth.exe`, nên thư mục app chứa tất cả. Nút **Mở** mở thư mục đó trong Explorer.
 
-- Lên từ bản 0.8 trở về trước (dữ liệu ở `%APPDATA%\DeathCounter` hoặc thư mục bạn tự chọn): lần mở đầu tiên app tự chép sang một lần. Bản cũ giữ nguyên cho tới khi gỡ app.
-- Thư mục app không ghi được thì dữ liệu tạm lưu ở `%APPDATA%\DeathCounter` và app báo cho bạn. Hãy cài lại vào thư mục bạn có quyền ghi.
+- Lên từ Death Counter: thư mục `DeathCounterData` được đổi tên ở lần mở đầu tiên. Lên từ bản 0.8 trở về trước (dữ liệu ở `%APPDATA%\DeathCounter` hoặc thư mục bạn tự chọn): lần mở đầu tiên app tự chép sang một lần. Bản cũ giữ nguyên cho tới khi gỡ app.
+- Thư mục app không ghi được thì dữ liệu tạm lưu ở `%APPDATA%\Byrgenwerth` và app báo cho bạn. Hãy cài lại vào thư mục bạn có quyền ghi.
 
 ### Gỡ cài đặt
 
-Bấm **Gỡ Death Counter...** trong tab này, hoặc vào *Settings → Apps → Death Counter → Uninstall* của Windows. Sau khi bạn xác nhận, app xóa:
+Bấm **Gỡ Byrgenwerth...** trong tab này, hoặc vào *Settings → Apps → Byrgenwerth → Uninstall* của Windows. Sau khi bạn xác nhận, app xóa:
 
-- toàn bộ dữ liệu: `DeathCounterData`, cùng `%APPDATA%\DeathCounter` và thư mục bạn chọn ở bản cũ (chỉ xóa file của Death Counter trong đó, không đụng file khác),
-- file `DeathCounter.exe`, và thư mục cài nếu không còn gì,
+- toàn bộ dữ liệu, gồm cả API key: `ByrgenwerthData`, `%APPDATA%\Byrgenwerth`, cùng `%APPDATA%\DeathCounter` và thư mục bạn chọn ở bản cũ (chỉ xóa file của app trong đó, không đụng file khác),
+- file `Byrgenwerth.exe`, và thư mục cài nếu không còn gì,
 - shortcut trong Start menu và mục trong *Apps & features*.
 
-Không hoàn tác được. Muốn giữ số đếm thì copy `DeathCounterData` ra chỗ khác trước.
+Không hoàn tác được. Muốn giữ số đếm thì copy `ByrgenwerthData` ra chỗ khác trước.
 
 ## 7. Tab Boss: Top 3 boss
 
@@ -201,13 +204,15 @@ Không hoàn tác được. Muốn giữ số đếm thì copy `DeathCounterData
 | F11 | Chỉ chụp ảnh mẫu, không đếm. |
 | F8 | Bật/tắt tự nhận diện. |
 | F7 | Ẩn/hiện cửa sổ app (cũng gọi lại cửa sổ sau khi nó tự thu nhỏ vì game). Nhận diện, overlay và OBS vẫn chạy. |
+| Ctrl+Alt+T | Bật/tắt dịch. |
+| Ctrl+Alt+R | Khoanh lại vùng hội thoại để dịch. |
 
 Phím tắt hoạt động cả khi đang ở trong game. Game sẽ không nhận được các phím này.
 Đổi phím: mở `config.json` trong thư mục dữ liệu, sửa mục `hotkeys` (ví dụ `"add": "Ctrl+F9"`), rồi mở lại app.
 
 ## 9. Dữ liệu được lưu ở đâu
 
-Trong thư mục `DeathCounterData` cạnh file `DeathCounter.exe` (nút **Mở** ở tab Cài đặt):
+Trong thư mục `ByrgenwerthData` cạnh file `Byrgenwerth.exe` (nút **Mở** ở tab Cài đặt):
 
 | File | Nội dung |
 |---|---|
@@ -217,6 +222,7 @@ Trong thư mục `DeathCounterData` cạnh file `DeathCounter.exe` (nút **Mở*
 | `history.csv` | Nhật ký từng lần +1/−1, mở bằng Excel được. |
 | `obs_deaths.txt` | File text cho OBS (nếu bật). |
 | `ocr-debug.log` | Mọi lần OCR đọc lúc game toàn màn hình đang ở trước (chữ, vị trí, cỡ chữ), mọi lần đếm và mọi lần đổi boss. Đầy 4 MB thì chuyển sang `ocr-debug.old.log`. Gửi kèm khi báo lỗi. |
+| `translate.key` | API key Anthropic, mã hóa theo tài khoản Windows của bạn. |
 | `ocr-misses.log` | Chữ OCR đọc được trong 10 giây trước mỗi lần bấm F9 +1, tức là những lần app bỏ sót. Gửi kèm khi báo lỗi. |
 
 Sao lưu: copy cả thư mục này.
@@ -255,3 +261,21 @@ Game đang ở Exclusive Fullscreen. Chuyển sang Borderless.
 ### OBS không hiện Browser Source
 - App phải đang mở.
 - Kiểm tra URL: cổng có thể khác 17321 nếu cổng đó bận; luôn copy URL từ app.
+
+## 11. Tab Translate: dịch hội thoại theo thời gian thực
+
+App đọc vùng hội thoại trong game và hiện bản dịch tiếng Việt trong một khung ngay cạnh vùng đó. Hiện chỉ dịch từ tiếng Anh sang tiếng Việt.
+
+1. Lấy API key ở [console.anthropic.com](https://console.anthropic.com), dán vào ô **API key**. Bạn trả phí cho Anthropic theo lượng dùng; dòng **Chi phí ước tính** cộng dồn từ số token và bảng giá, tính lại từ đầu khi đổi key hoặc đổi game.
+2. Mở game, bấm **Ctrl+Alt+R** rồi kéo chuột khoanh khung hội thoại. Khoanh càng hẹp càng đỡ tốn phí và càng ít đọc nhầm. Bấm phím này ngay trong game cũng được, hoặc dùng nút **Khoanh vùng...** trong tab.
+3. Tick **Bật dịch** hoặc bấm **Ctrl+Alt+T**. Mỗi lần mở app, phần dịch luôn tắt, nên chưa bật thì không có gì được gửi đi.
+
+Cần biết:
+
+- **Dữ liệu gửi đi**: chữ OCR đọc được trong vùng khoanh, 8 câu trước đó và tên game đang chọn được gửi tới API của Anthropic (`claude-haiku-5-5`). Ảnh màn hình không được gửi, chữ ngoài vùng khoanh cũng không.
+- **API key** được mã hóa theo tài khoản Windows của bạn (DPAPI) trong file `translate.key`. Gỡ app sẽ xóa file này.
+- App chờ chữ đứng yên rồi mới dịch, nên chữ hiện dần sẽ đợi hiện hết. Câu lặp lại lấy từ cache, không tốn phí.
+- Khi lỗi, khung hiện câu tiếng Anh kèm lý do. Vùng có hơn 500 ký tự sẽ không dịch: hãy khoanh hẹp lại.
+- Windows cần có gói OCR tiếng Anh: *Settings → Time & language → Language & region*.
+- Game phải chạy **Borderless** hoặc **Windowed**, nếu không khung dịch không hiện được phía trên.
+- Phần dịch mới thêm và chưa được thử với game thật. Có thể còn lỗi.

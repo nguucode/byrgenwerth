@@ -271,7 +271,7 @@ type SplitsState struct {
 	Total    int        `json:"total"`
 	FontSize int        `json:"size"`
 	Font     string     `json:"font"`
-	// Text style shared with the death counter overlay.
+	// Text style shared with the death count overlay.
 	Color        string `json:"color"`
 	Bold         bool   `json:"bold"`
 	OutlineWidth int    `json:"outlineWidth"` // 0 = no outline
@@ -333,7 +333,7 @@ func LayoutSplits(st SplitsState, fs int, measure func(text string, px int, bold
 
 	title := st.Title
 	if title == "" {
-		title = "Death Counter"
+		title = "Byrgenwerth"
 	}
 	name := func(row SplitRow) string {
 		if row.Active {

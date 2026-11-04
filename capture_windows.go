@@ -91,6 +91,25 @@ func OcrSize(m Monitor) (int32, int32) {
 // CaptureMonitorScaled grabs the monitor scaled to cw x ch.
 // Scaling happens in GDI (HALFTONE), so we never copy a full 4K frame to Go.
 func CaptureMonitorScaled(m Monitor, cw, ch int32) (*image.RGBA, error) {
+	return captureRect(m.Px(), cw, ch)
+}
+
+// Px is the monitor's rectangle on the virtual screen.
+func (m Monitor) Px() PxRect {
+	return PxRect{m.Rect.Left, m.Rect.Top, m.Rect.Right, m.Rect.Bottom}
+}
+
+// CaptureRegion grabs a screen rectangle for OCR, no wider than 1920 px.
+func CaptureRegion(r PxRect) (*image.RGBA, error) {
+	w, h := r.R-r.L, r.B-r.T
+	if w <= 0 || h <= 0 {
+		return nil, errors.New("vùng khoanh rỗng")
+	}
+	cw := min(w, 1920)
+	return captureRect(r, cw, max(h*cw/w, 1))
+}
+
+func captureRect(r PxRect, cw, ch int32) (*image.RGBA, error) {
 	screenDC := win.GetDC(0)
 	if screenDC == 0 {
 		return nil, errors.New("GetDC failed")
@@ -112,9 +131,7 @@ func CaptureMonitorScaled(m Monitor, cw, ch int32) (*image.RGBA, error) {
 	old := win.SelectObject(memDC, win.HGDIOBJ(bmp))
 	win.SetStretchBltMode(memDC, win.HALFTONE)
 	win.SetBrushOrgEx(memDC, 0, 0, nil)
-	w := m.Rect.Right - m.Rect.Left
-	h := m.Rect.Bottom - m.Rect.Top
-	ok := win.StretchBlt(memDC, 0, 0, cw, ch, screenDC, m.Rect.Left, m.Rect.Top, w, h, win.SRCCOPY|win.CAPTUREBLT)
+	ok := win.StretchBlt(memDC, 0, 0, cw, ch, screenDC, r.L, r.T, r.R-r.L, r.B-r.T, win.SRCCOPY|win.CAPTUREBLT)
 	win.SelectObject(memDC, old)
 	if !ok {
 		return nil, errors.New("StretchBlt failed")

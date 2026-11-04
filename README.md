@@ -1,8 +1,9 @@
-# Death Counter
+# Byrgenwerth
 
-A small Windows app that counts how many times you die in a game, automatically.
-It reads the screen with the OCR built into Windows ("YOU DIED", "WASTED", "DEAD"...),
-shows the count as an on-screen overlay or in OBS, and tracks which bosses kill you the most.
+A small Windows app that supports you while you play. Formerly Death Counter. It has two tools:
+
+- **Death count**: counts how many times you die, automatically. It reads the screen with the OCR built into Windows ("YOU DIED", "WASTED", "DEAD"...), shows the count as an on-screen overlay or in OBS, and tracks which bosses kill you the most.
+- **Translate**: translates game dialogue from English to Vietnamese in real time, in a box next to the dialogue. New, and not yet tried on a real game.
 
 **[Tiếng Việt bên dưới](#tiếng-việt)** · **[Install](#quick-start)** · **[User guide](docs/user-guide.md)** · **[Hướng dẫn sử dụng](docs/huong-dan-su-dung.md)**
 
@@ -10,6 +11,7 @@ shows the count as an on-screen overlay or in OBS, and tracks which bosses kill 
 
 ## Features
 
+- **Real-time translation (EN → VI)**: draw a box around the dialogue and the translation appears next to it. Uses your own Anthropic API key, encrypted with your Windows account. Off until you turn it on; only the text in that box, the lines before it and the game name are sent. See [section 11 of the guide](docs/user-guide.md#11-translate-tab-real-time-dialogue-translation).
 - **Automatic death detection** with Windows OCR. No setup for games with a readable death banner.
 - **Presets for 100 popular games**: 37 with verified death-screen text, the rest fall back to a generic keyword list. Not every game counts on its own: see the [list of supported games](docs/user-guide.md#supported-games) for what works out of the box, and [docs/death-screens-top100.csv](docs/death-screens-top100.csv) for the research and sources.
 - **Games without a death screen**: counts a death when the health bar empties and the screen fades to black. Works with HUD bars and with health shown on the character (Dead Space).
@@ -17,9 +19,9 @@ shows the count as an on-screen overlay or in OBS, and tracks which bosses kill 
 - **Top 3 bosses** panel in your text style: the boss name above its health bar is read by OCR and each death is credited to the boss you were fighting.
 - **Display anywhere**: click-through on-screen overlay, OBS Browser Source (keeps your text style, works with Game Capture), or a plain text file.
 - **Text style**: font, size, bold, color, outline width and color.
-- **Hotkeys**: F9 +1 and learn template · F10 −1 · F11 capture template · F8 toggle detection · F7 hide/show the app.
+- **Hotkeys**: F9 +1 and learn template · F10 −1 · F11 capture template · F8 toggle detection · F7 hide/show the app · Ctrl+Alt+T toggle translation · Ctrl+Alt+R redraw the dialogue region.
 - **Optional sound** on every count (bring your own .mp3 / .wav).
-- **One-line install and update** from PowerShell. The app and its data stay in one folder; **uninstall** from the app removes everything. No internet needed while playing.
+- **One-line install and update** from PowerShell. The app and its data stay in one folder; **uninstall** from the app removes everything. Death count needs no internet; Translate does.
 
 ![Text styles in OBS](docs/images/text-styles.png)
 
@@ -49,7 +51,7 @@ Requires Go 1.24+. Releases are built on Windows by GitHub Actions when a `v*` t
 
 ```sh
 go test ./...
-GOOS=windows GOARCH=amd64 go build -ldflags "-H windowsgui -s -w" -o DeathCounter.exe .
+GOOS=windows GOARCH=amd64 go build -ldflags "-H windowsgui -s -w" -o Byrgenwerth.exe .
 ```
 
 `rsrc_windows_amd64.syso` holds the manifest and icon; regenerate it with
@@ -64,10 +66,14 @@ The UI uses [lxn/walk](https://github.com/lxn/walk); OCR calls `Windows.Media.Oc
 
 ## Tiếng Việt
 
-App Windows nhỏ gọn **tự đếm số lần chết** khi chơi game. App đọc màn hình bằng OCR có sẵn của Windows ("YOU DIED", "WASTED", "DEAD"...), hiện số đếm bằng overlay trên màn hình hoặc trong OBS, và thống kê boss nào "hành" bạn nhiều nhất.
+App Windows nhỏ gọn hỗ trợ bạn khi chơi game, tên cũ là Death Counter. App có hai công cụ:
+
+- **Death count**: **tự đếm số lần chết**. App đọc màn hình bằng OCR có sẵn của Windows ("YOU DIED", "WASTED", "DEAD"...), hiện số đếm bằng overlay trên màn hình hoặc trong OBS, và thống kê boss nào "hành" bạn nhiều nhất.
+- **Translate**: dịch hội thoại trong game từ tiếng Anh sang tiếng Việt theo thời gian thực, hiện trong một khung cạnh hội thoại. Mới thêm, chưa thử với game thật.
 
 ### Tính năng
 
+- **Dịch real-time (Anh → Việt)**: khoanh vùng hội thoại là bản dịch hiện ngay bên cạnh. Dùng API key Anthropic của bạn, mã hóa theo tài khoản Windows. Chưa bật thì không gửi gì; khi bật chỉ gửi chữ trong vùng khoanh, các câu trước đó và tên game. Xem [mục 11 trong hướng dẫn](docs/huong-dan-su-dung.md#11-tab-translate-dịch-hội-thoại-theo-thời-gian-thực).
 - **Tự nhận màn chết** bằng OCR của Windows. Game có chữ chết dễ đọc thì không cần cài đặt gì.
 - **Mẫu cho 100 game phổ biến**: 37 game đã xác minh chữ màn chết, số còn lại dùng bộ từ khóa chung. Không phải game nào cũng tự đếm được: xem [danh sách game được hỗ trợ](docs/huong-dan-su-dung.md#game-được-hỗ-trợ) để biết game nào chạy sẵn. Dữ liệu và nguồn tra cứu ở [docs/death-screens-top100.csv](docs/death-screens-top100.csv).
 - **Game không có màn chết**: đếm khi thanh máu về 0 rồi màn hình tối đen. Dùng được cả thanh máu HUD lẫn máu hiện trên người nhân vật (Dead Space).
@@ -75,9 +81,9 @@ App Windows nhỏ gọn **tự đếm số lần chết** khi chơi game. App đ
 - **Bảng top 3 boss** theo kiểu chữ của bạn: đọc tên boss trên thanh máu, mỗi lần chết được tính cho boss đang đánh.
 - **Hiển thị**: overlay nổi trên game (chuột bấm xuyên qua), OBS Browser Source (giữ nguyên kiểu chữ, dùng được với Game Capture), hoặc file text.
 - **Kiểu chữ**: font, cỡ chữ, đậm, màu chữ, viền và màu viền.
-- **Phím tắt**: F9 +1 và học mẫu · F10 −1 · F11 chụp mẫu · F8 bật/tắt nhận diện · F7 ẩn/hiện app.
+- **Phím tắt**: F9 +1 và học mẫu · F10 −1 · F11 chụp mẫu · F8 bật/tắt nhận diện · F7 ẩn/hiện app · Ctrl+Alt+T bật/tắt dịch · Ctrl+Alt+R khoanh lại vùng hội thoại.
 - **Âm thanh xác nhận** mỗi lần đếm (tự chọn file .mp3 / .wav).
-- **Cài và cập nhật bằng một lệnh** PowerShell. App và dữ liệu nằm chung một thư mục; **gỡ cài đặt** ngay trong app sẽ xóa sạch. Lúc chơi không cần internet.
+- **Cài và cập nhật bằng một lệnh** PowerShell. App và dữ liệu nằm chung một thư mục; **gỡ cài đặt** ngay trong app sẽ xóa sạch. Death count không cần internet; Translate thì cần.
 
 ### Bắt đầu nhanh
 
