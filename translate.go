@@ -210,7 +210,7 @@ func OcrSize(m Monitor) (int32, int32) {
 	if w <= 0 || h <= 0 {
 		return 1280, 720
 	}
-	// 1920 keeps small labels (boss names on a 4K screen) readable for OCR.
+	// 1920 keeps small labels (on a 4K screen) readable for OCR.
 	ow := int32(1920)
 	if w < ow {
 		ow = w

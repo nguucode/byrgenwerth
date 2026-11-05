@@ -52,7 +52,6 @@ type Overlay struct {
 	Color        RGB
 	OutlineWidth int // 0 = no outline
 	OutlineColor RGB
-	Splits       *SplitsState   // when set, draws the speedrun-style boss panel instead of Text
 	Subtitle     *SubtitleState // when set, draws the translation box instead of Text
 	editing      bool
 	OnMoved      func(x, y int32)
@@ -143,10 +142,6 @@ func (o *Overlay) Destroy() {
 // Render draws the text into a 32-bit DIB and pushes it with UpdateLayeredWindow.
 func (o *Overlay) Render() {
 	if o == nil || o.hwnd == 0 {
-		return
-	}
-	if o.Splits != nil {
-		o.renderPanel()
 		return
 	}
 	if o.Subtitle != nil {
@@ -272,150 +267,4 @@ func gdiFont(family string, px int, bold bool) win.HFONT {
 	face, _ := syscall.UTF16FromString(family)
 	copy(lf.LfFaceName[:len(lf.LfFaceName)-1], face)
 	return win.CreateFontIndirect(&lf)
-}
-
-// renderPanel draws the boss panel laid out by LayoutSplits: text and rules in
-// the overlay text color, with the same outline, on a transparent background.
-func (o *Overlay) renderPanel() {
-	screenDC := win.GetDC(0)
-	defer win.ReleaseDC(0, screenDC)
-	memDC := win.CreateCompatibleDC(screenDC)
-	defer win.DeleteDC(memDC)
-
-	type fkey struct {
-		px   int
-		bold bool
-	}
-	fonts := map[fkey]win.HFONT{}
-	defer func() {
-		for _, f := range fonts {
-			win.DeleteObject(win.HGDIOBJ(f))
-		}
-	}()
-	use := func(px int, bold bool) {
-		k := fkey{px, bold}
-		f, ok := fonts[k]
-		if !ok {
-			f = gdiFont(o.FontFamily, px, bold)
-			fonts[k] = f
-		}
-		win.SelectObject(memDC, win.HGDIOBJ(f))
-	}
-	oldFont := win.SelectObject(memDC, win.GetStockObject(win.DEFAULT_GUI_FONT))
-	defer win.SelectObject(memDC, oldFont)
-	measure := func(text string, px int, bold bool) (int, int) {
-		use(px, bold)
-		t16, _ := syscall.UTF16FromString(text)
-		var sz win.SIZE
-		if len(t16) > 1 {
-			win.GetTextExtentPoint32(memDC, &t16[0], int32(len(t16)-1), &sz)
-		} else {
-			win.GetTextExtentPoint32(memDC, &[]uint16{'A', 0}[0], 1, &sz)
-			sz.CX = 0
-		}
-		return int(sz.CX), int(sz.CY)
-	}
-
-	W, H, rules, texts := LayoutSplits(*o.Splits, o.FontSize, measure)
-	ow := max(o.OutlineWidth, 0)
-	edge := ow + 4
-	if o.editing {
-		edge += 8
-	}
-	w, h := int32(W+2*edge), int32(H+2*edge)
-
-	var bih win.BITMAPINFOHEADER
-	bih.BiSize = uint32(unsafe.Sizeof(bih))
-	bih.BiWidth = w
-	bih.BiHeight = -h
-	bih.BiPlanes = 1
-	bih.BiBitCount = 32
-	bih.BiCompression = win.BI_RGB
-	var bits unsafe.Pointer
-	dib := win.CreateDIBSection(memDC, &bih, win.DIB_RGB_COLORS, &bits, 0, 0)
-	if dib == 0 || bits == nil {
-		return
-	}
-	defer win.DeleteObject(win.HGDIOBJ(dib))
-	oldBmp := win.SelectObject(memDC, win.HGDIOBJ(dib))
-	defer win.SelectObject(memDC, oldBmp)
-	pix := unsafe.Slice((*byte)(bits), int(w*h*4))
-
-	// Cut long texts to one line and resolve right alignment once.
-	type placed struct {
-		x, y, px int
-		bold     bool
-		t16      []uint16
-	}
-	var items []placed
-	for _, tx := range texts {
-		text := tx.Text
-		tw, _ := measure(text, tx.Px, tx.Bold)
-		if tx.MaxW > 0 && tw > tx.MaxW {
-			r := []rune(text)
-			for len(r) > 1 {
-				r = r[:len(r)-1]
-				if cw, _ := measure(string(r)+"…", tx.Px, tx.Bold); cw <= tx.MaxW {
-					break
-				}
-			}
-			text = string(r) + "…"
-			tw, _ = measure(text, tx.Px, tx.Bold)
-		}
-		x := tx.X
-		if tx.Right {
-			x -= tw
-		}
-		t16, _ := syscall.UTF16FromString(text)
-		items = append(items, placed{x + edge, tx.Y + edge, tx.Px, tx.Bold, t16})
-	}
-
-	win.SetBkMode(memDC, win.TRANSPARENT)
-	win.SetTextColor(memDC, win.RGB(255, 255, 255))
-	// mask stamps every text and rule at each offset and returns the coverage.
-	mask := func(offsets [][2]int) []uint8 {
-		for i := range pix {
-			pix[i] = 0
-		}
-		for _, d := range offsets {
-			for _, it := range items {
-				if len(it.t16) > 1 {
-					use(it.px, it.bold)
-					win.TextOut(memDC, int32(it.x+d[0]), int32(it.y+d[1]), &it.t16[0], int32(len(it.t16)-1))
-				}
-			}
-		}
-		win.GdiFlush()
-		m := make([]uint8, w*h)
-		for i := range m {
-			m[i] = max(pix[i*4], pix[i*4+1], pix[i*4+2])
-		}
-		grow := 0
-		if len(offsets) > 1 {
-			grow = ow
-		}
-		for _, rc := range rules {
-			for y := max(rc.Y+edge-grow, 0); y < min(rc.Y+edge+rc.H+grow, int(h)); y++ {
-				for x := max(rc.X+edge-grow, 0); x < min(rc.X+edge+rc.W+grow, int(w)); x++ {
-					m[y*int(w)+x] = 255
-				}
-			}
-		}
-		return m
-	}
-	fill := mask([][2]int{{0, 0}})
-	out := make([]uint8, len(fill))
-	if ow > 0 {
-		out = mask(OutlineOffsets(ow))
-	}
-	copy(pix, ComposeOverlay(fill, out, int(w), int(h), o.Color, o.OutlineColor, o.editing))
-
-	dst := win.POINT{X: o.X, Y: o.Y}
-	size := win.SIZE{CX: w, CY: h}
-	src := win.POINT{}
-	blend := win.BLENDFUNCTION{BlendOp: 0, SourceConstantAlpha: 255, AlphaFormat: win.AC_SRC_ALPHA}
-	procUpdateLayeredWindow.Call(uintptr(o.hwnd), uintptr(screenDC),
-		uintptr(unsafe.Pointer(&dst)), uintptr(unsafe.Pointer(&size)),
-		uintptr(memDC), uintptr(unsafe.Pointer(&src)), 0,
-		uintptr(unsafe.Pointer(&blend)), 2 /* ULW_ALPHA */)
 }

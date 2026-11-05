@@ -89,7 +89,6 @@ dialog p { margin: 0 0 10px; white-space: pre-line; }
     <button role="tab" data-tab="detect" aria-selected="true">Nhận diện</button>
     <button role="tab" data-tab="display" aria-selected="false">Hiển thị</button>
     <button role="tab" data-tab="settings" aria-selected="false">Cài đặt</button>
-    <button role="tab" data-tab="boss" aria-selected="false">Boss</button>
   </div>
 
   <section id="tab-detect">
@@ -178,34 +177,6 @@ dialog p { margin: 0 0 10px; white-space: pre-line; }
     <p class="hint">Xóa app, toàn bộ dữ liệu và API key. Không hoàn tác được.</p>
   </section>
 
-  <section id="tab-boss" hidden>
-    <h2>Theo dõi boss</h2>
-    <label class="check"><input type="checkbox" data-cur="boss" data-send="boss"> Ghi nhận boss khi chết (OCR tên trên thanh máu)</label>
-    <div class="form">
-      <span>Đang đánh</span><span id="boss-now" class="ellipsis">--</span>
-      <span>Vùng tên boss</span><div class="row"><span id="boss-zone" class="grow ellipsis"></span><button data-do="pick" data-s="boss">Khoanh vùng...</button><button data-do="boss-zone-auto">Tự động</button></div>
-    </div>
-    <p class="hint">Tên boss đứng yên trên màn hình vài giây mới được ghi nhận, phụ đề sẽ bị bỏ qua.</p>
-    <hr>
-    <h2>Thống kê</h2>
-    <div class="list" id="bosses" role="listbox" aria-label="Boss"></div>
-    <div class="row" style="margin-top:6px">
-      <button id="boss-rename">Đổi tên...</button>
-      <button id="boss-merge">Gộp vào...</button>
-      <button id="boss-remove">Xóa</button>
-      <span class="grow"></span>
-      <button id="boss-clear" class="danger">Xóa hết</button>
-    </div>
-    <hr>
-    <h2>Bảng Top 3</h2>
-    <label class="check"><input type="checkbox" data-root="panel" data-send="panel"> Hiện bảng nổi trên màn hình</label>
-    <div class="form">
-      <span>Cỡ chữ</span><div class="row"><input type="number" id="panelFont" min="10" max="80"><span>px</span></div>
-      <span>Vị trí</span><div class="row"><button id="panel-edit" data-do="panel-edit"></button><button data-do="panel-reset">Đặt lại</button></div>
-      <span>OBS</span><div class="row"><input type="text" id="bossUrl" readonly><button data-copy="bossUrl">Copy</button></div>
-    </div>
-    <p class="hint">Tên game, tổng số lần chết, rồi top 3 boss. Dùng màu và viền chữ ở tab Hiển thị; ▶ là boss đang đánh.</p>
-  </section>
   <hr>
   <p class="hint" id="hotkeys"></p>
 </div>
@@ -251,7 +222,6 @@ dialog p { margin: 0 0 10px; white-space: pre-line; }
 <dialog id="dlg"><form method="dialog">
   <p id="dlg-msg"></p>
   <input type="text" id="dlg-input" hidden>
-  <select id="dlg-select" hidden></select>
   <div class="row" style="flex-direction:row-reverse;margin-top:12px">
     <button value="ok" id="dlg-ok">OK</button>
     <button value="cancel">Hủy</button>
@@ -261,7 +231,7 @@ dialog p { margin: 0 0 10px; white-space: pre-line; }
 <script>
 const token = new URLSearchParams(location.search).get('t');
 const $ = id => document.getElementById(id);
-let S = {}, tmplSel = -1, bossSel = -1, pickOpen = null;
+let S = {}, tmplSel = -1, pickOpen = null;
 
 const api = (path, opts = {}) => fetch(path, {...opts, headers: {'X-Token': token, ...(opts.headers || {})}});
 async function send(body) {
@@ -332,15 +302,9 @@ function render() {
   const fonts = $('fonts');
   if (!fonts.children.length && S.fonts) fonts.replaceChildren(...S.fonts.map(f => { const o = document.createElement('option'); o.value = f; return o; }));
   setText('overlay-edit', S.overlayEdit ? 'Xong, lưu vị trí' : 'Chỉnh vị trí overlay');
-  setText('panel-edit', S.panelEdit ? 'Xong, lưu vị trí' : 'Chỉnh vị trí bảng');
-  setVal($('url'), S.url); setVal($('obsPath'), S.obsPath); setVal($('bossUrl'), S.bossUrl); setVal($('dataDir'), S.dataDir);
+  setVal($('url'), S.url); setVal($('obsPath'), S.obsPath); setVal($('dataDir'), S.dataDir);
   setVal($('volume'), S.volume);
   setText('sound-file', S.hasSoundFile ? S.soundFile : 'Chưa chọn');
-  setText('boss-now', c.bossNow); setText('boss-zone', c.bossZone);
-  const b = c.bosses || [];
-  if (bossSel >= b.length) bossSel = -1;
-  fillList($('bosses'), b.map(x => x.deaths + '   ' + x.name), bossSel, i => { bossSel = i; render(); });
-  setVal($('panelFont'), S.panelFont);
   const h = S.hotkeys || {};
   setText('hotkeys', `Phím tắt: ${h.add} +1 · ${h.sub} −1 · ${h.capture} chụp mẫu · ${h.toggle} bật/tắt nhận diện · ${h.window} ẩn/hiện app`);
 
@@ -407,7 +371,6 @@ $('cooldown').onchange = e => doIt('cooldown', {n: +e.target.value});
 $('monitor').onchange = e => doIt('monitor', {n: +e.target.value});
 $('format').onchange = e => doIt('format', {s: e.target.value});
 $('volume').onchange = e => doIt('volume', {n: +e.target.value});
-$('panelFont').onchange = e => doIt('panel-font', {n: +e.target.value});
 $('tr-font').onchange = e => doIt('sub-font', {n: +e.target.value});
 $('tr-on').onchange = e => doIt('translate', {b: e.target.checked});
 $('tr-key').onchange = e => { const v = e.target.value; e.target.value = ''; doIt('api-key', {s: v}); };
@@ -421,41 +384,22 @@ $('del-profile').onclick = async () => { if (await confirmIt(`Xóa "${S.cur?.nam
 $('reset').onclick = async () => { if (await confirmIt(`Đưa số lần chết của "${S.cur?.name}" về 0?`)) doIt('reset'); };
 $('del-template').onclick = () => { if (tmplSel >= 0) doIt('template-remove', {n: tmplSel}); };
 $('uninstall').onclick = async () => {
-  if (await confirmIt('Gỡ Byrgenwerth khỏi máy?\n\nSẽ xóa toàn bộ số đếm, ảnh mẫu, thống kê boss, cài đặt, API key và chính app.\n\nKhông hoàn tác được.')) doIt('uninstall');
+  if (await confirmIt('Gỡ Byrgenwerth khỏi máy?\n\nSẽ xóa toàn bộ số đếm, ảnh mẫu, cài đặt, API key và chính app.\n\nKhông hoàn tác được.')) doIt('uninstall');
 };
-const selBoss = () => (S.cur?.bosses || [])[bossSel];
-$('boss-rename').onclick = async () => {
-  const b = selBoss(); if (!b) return;
-  const v = await askText('Tên đúng của boss:', b.name); if (v) doIt('boss-rename', {s: b.name, s2: v});
-};
-$('boss-merge').onclick = async () => {
-  const b = selBoss(); if (!b) return;
-  const others = S.cur.bosses.filter(x => x.name !== b.name).map(x => x.name);
-  if (!others.length) return;
-  const v = await askChoice(`Gộp "${b.name}" (${b.deaths} lần) vào:`, others);
-  if (v) doIt('boss-merge', {s: b.name, s2: v});
-};
-$('boss-remove').onclick = async () => {
-  const b = selBoss(); if (!b) return;
-  if (await confirmIt(`Xóa "${b.name}" khỏi thống kê?\n(Tổng số lần chết không đổi.)`)) doIt('boss-remove', {s: b.name});
-};
-$('boss-clear').onclick = async () => { if (await confirmIt('Xóa toàn bộ thống kê boss của game này?\n(Tổng số lần chết không đổi.)')) doIt('boss-clear'); };
 
 // ---------- dialogs ----------
-function openDialog(msg, input, options) {
+function openDialog(msg, input) {
   const d = $('dlg');
   $('dlg-msg').textContent = msg;
-  $('dlg-input').hidden = input === null; $('dlg-select').hidden = !options;
+  $('dlg-input').hidden = input === null;
   if (input !== null) $('dlg-input').value = input ?? '';
-  if (options) fillSelect($('dlg-select'), options.map(o => [o, o]));
   d.returnValue = 'cancel';
   d.showModal();
   if (input !== null) $('dlg-input').select();
   return new Promise(res => { d.onclose = () => res(d.returnValue === 'ok'); });
 }
-const confirmIt = msg => openDialog(msg, null, null);
-const askText = async (msg, v) => (await openDialog(msg, v ?? '', null)) ? $('dlg-input').value.trim() : '';
-const askChoice = async (msg, opts) => (await openDialog(msg, null, opts)) ? $('dlg-select').value : '';
+const confirmIt = msg => openDialog(msg, null);
+const askText = async (msg, v) => (await openDialog(msg, v ?? '')) ? $('dlg-input').value.trim() : '';
 
 // ---------- region picker ----------
 let roi = null, drag = null;

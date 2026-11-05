@@ -2,12 +2,10 @@
 
 A small app for Windows and macOS that supports you while you play. Formerly Death Counter. It has two tools:
 
-- **Death count**: counts how many times you die, automatically. It reads the screen with the OCR built into the system ("YOU DIED", "WASTED", "DEAD"...), shows the count as an on-screen overlay or in OBS, and tracks which bosses kill you the most.
+- **Death count**: counts how many times you die, automatically. It reads the screen with the OCR built into the system ("YOU DIED", "WASTED", "DEAD"...) and shows the count as an on-screen overlay or in OBS.
 - **Translate**: translates game dialogue from English to Vietnamese in real time, in a box next to the dialogue. New, and not yet tried on a real game.
 
 **[Tiếng Việt bên dưới](#tiếng-việt)** · **[Install](#quick-start)** · **[User guide](docs/user-guide.md)** · **[Hướng dẫn sử dụng](docs/huong-dan-su-dung.md)**
-
-![Top bosses panel](docs/images/boss-panel.png)
 
 ## Features
 
@@ -16,7 +14,6 @@ A small app for Windows and macOS that supports you while you play. Formerly Dea
 - **Presets for 100 popular games**: 37 with verified death-screen text, the rest fall back to a generic keyword list. Not every game counts on its own: see the [list of supported games](docs/user-guide.md#supported-games) for what works out of the box, and [docs/death-screens-top100.csv](docs/death-screens-top100.csv) for the research and sources.
 - **Games without a death screen**: counts a death when the health bar empties and the screen fades to black. Works with HUD bars and with health shown on the character (Dead Space).
 - **Self-learning templates**: the first OCR hit saves a screenshot template, so stylized frames OCR misreads later are still caught. Games without death text can be taught with one hotkey press (F9).
-- **Top 3 bosses** panel in your text style: the boss name above its health bar is read by OCR and each death is credited to the boss you were fighting.
 - **Display anywhere**: click-through on-screen overlay, OBS Browser Source (keeps your text style, works with Game Capture), or a plain text file.
 - **Text style**: font, size, bold, color, outline width and color.
 - **Hotkeys**: F9 +1 and learn template · F10 −1 · F11 capture template · F8 toggle detection · F7 hide/show the app · Ctrl+Alt+T toggle translation · Ctrl+Alt+R redraw the dialogue region.
@@ -49,7 +46,7 @@ Full walkthrough: **[docs/user-guide.md](docs/user-guide.md)**.
 - Windows 10 or 11, 64-bit, or macOS 14 or newer. The Mac version is new and has not been tried with a game yet.
 - OCR uses the languages installed in Windows. English works out of the box on most PCs; for games in other languages add that language in *Settings → Time & language → Language & region*.
 - Games must run in **Borderless** or **Windowed** mode. Exclusive fullscreen hides the screen from capture and hides the overlay.
-- Project status: early. Death counting, overlay and OBS output have been used on a real setup; boss tracking and OCR language selection are new and lightly tested. Please open an issue with a screenshot if something is off.
+- Project status: early. Death counting, overlay and OBS output have been used on a real setup; OCR language selection is new and lightly tested. Please open an issue with a screenshot if something is off.
 
 ## Build from source
 
@@ -75,7 +72,7 @@ On Windows the UI uses [lxn/walk](https://github.com/lxn/walk) and OCR calls `Wi
 
 App nhỏ gọn cho Windows và macOS, hỗ trợ bạn khi chơi game, tên cũ là Death Counter. App có hai công cụ:
 
-- **Death count**: **tự đếm số lần chết**. App đọc màn hình bằng OCR có sẵn của hệ điều hành ("YOU DIED", "WASTED", "DEAD"...), hiện số đếm bằng overlay trên màn hình hoặc trong OBS, và thống kê boss nào "hành" bạn nhiều nhất.
+- **Death count**: **tự đếm số lần chết**. App đọc màn hình bằng OCR có sẵn của hệ điều hành ("YOU DIED", "WASTED", "DEAD"...) rồi hiện số đếm bằng overlay trên màn hình hoặc trong OBS.
 - **Translate**: dịch hội thoại trong game từ tiếng Anh sang tiếng Việt theo thời gian thực, hiện trong một khung cạnh hội thoại. Mới thêm, chưa thử với game thật.
 
 ### Tính năng
@@ -85,7 +82,6 @@ App nhỏ gọn cho Windows và macOS, hỗ trợ bạn khi chơi game, tên cũ
 - **Mẫu cho 100 game phổ biến**: 37 game đã xác minh chữ màn chết, số còn lại dùng bộ từ khóa chung. Không phải game nào cũng tự đếm được: xem [danh sách game được hỗ trợ](docs/huong-dan-su-dung.md#game-được-hỗ-trợ) để biết game nào chạy sẵn. Dữ liệu và nguồn tra cứu ở [docs/death-screens-top100.csv](docs/death-screens-top100.csv).
 - **Game không có màn chết**: đếm khi thanh máu về 0 rồi màn hình tối đen. Dùng được cả thanh máu HUD lẫn máu hiện trên người nhân vật (Dead Space).
 - **Tự học ảnh mẫu**: lần đầu OCR bắt được, app lưu ảnh màn chết làm mẫu, sau này OCR đọc trượt thì ảnh mẫu bắt thay. Game không có chữ chết thì bấm F9 một lần để dạy.
-- **Bảng top 3 boss** theo kiểu chữ của bạn: đọc tên boss trên thanh máu, mỗi lần chết được tính cho boss đang đánh.
 - **Hiển thị**: overlay nổi trên game (chuột bấm xuyên qua), OBS Browser Source (giữ nguyên kiểu chữ, dùng được với Game Capture), hoặc file text.
 - **Kiểu chữ**: font, cỡ chữ, đậm, màu chữ, viền và màu viền.
 - **Phím tắt**: F9 +1 và học mẫu · F10 −1 · F11 chụp mẫu · F8 bật/tắt nhận diện · F7 ẩn/hiện app · Ctrl+Alt+T bật/tắt dịch · Ctrl+Alt+R khoanh lại vùng hội thoại.
@@ -115,4 +111,4 @@ Hướng dẫn chi tiết: **[docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.
 - Windows 10 hoặc 11, 64-bit, hoặc macOS 14 trở lên. Bản Mac mới thêm, chưa thử với game thật.
 - OCR dùng ngôn ngữ đã cài trong Windows. Game tiếng Trung/Nhật/Việt... thì thêm ngôn ngữ đó trong *Settings → Time & language → Language & region*.
 - Game phải chạy **Borderless** hoặc **Windowed**. Exclusive Fullscreen làm app không chụp được màn hình và che mất overlay.
-- Tình trạng: bản sớm. Đếm số, overlay và OBS đã chạy trên máy thật; theo dõi boss và chọn ngôn ngữ OCR mới thêm, còn ít được thử. Gặp lỗi thì mở issue kèm ảnh chụp màn hình.
+- Tình trạng: bản sớm. Đếm số, overlay và OBS đã chạy trên máy thật; chọn ngôn ngữ OCR mới thêm, còn ít được thử. Gặp lỗi thì mở issue kèm ảnh chụp màn hình.

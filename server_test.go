@@ -52,35 +52,6 @@ func TestOverlayServer(t *testing.T) {
 	}
 }
 
-func TestBossEndpoint(t *testing.T) {
-	s, err := StartOverlayServer(17400)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Close()
-	r, _ := http.Get(s.BossURL() + "/state")
-	var st SplitsState
-	json.NewDecoder(r.Body).Decode(&st)
-	r.Body.Close()
-	if st.Rows == nil || len(st.Rows) != 0 {
-		t.Fatal("empty state must have rows: []")
-	}
-	p := &Profile{Bosses: []BossStat{{"Margit, the Fell Omen", 23}, {"Godrick the Grafted", 11}}}
-	s.SetSplits(SplitsState{Title: "Elden Ring", Rows: BuildSplits(p, "Godrick the Grafted", 3), Total: 41})
-	r, _ = http.Get(s.BossURL() + "/state")
-	json.NewDecoder(r.Body).Decode(&st)
-	r.Body.Close()
-	if len(st.Rows) != 2 || !st.Rows[1].Active || st.Total != 41 || st.Version != 1 {
-		t.Fatalf("%+v", st)
-	}
-	r, _ = http.Get(s.BossURL())
-	b, _ := io.ReadAll(r.Body)
-	r.Body.Close()
-	if !strings.Contains(string(b), "/bosses/state") {
-		t.Fatal("boss page wrong")
-	}
-}
-
 func TestRequireTokenKeepsOtherPagesOut(t *testing.T) {
 	h := RequireToken("secret", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusTeapot) })
 	cases := []struct {

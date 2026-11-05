@@ -78,37 +78,27 @@ type App struct {
 	presetCB   *walk.ComboBox
 	presetLbl  *walk.TextLabel
 
-	langCB      *walk.ComboBox
-	ocrLangs    []OcrLang
-	bossCB      *walk.CheckBox
-	bossNowLbl  *walk.Label
-	bossZoneLbl *walk.Label
-	bossLB      *walk.ListBox
-	bossList    []BossStat
-	panelCB     *walk.CheckBox
-	panelFontNE *walk.NumberEdit
-	editPanelPB *walk.PushButton
-	bossURLLE   *walk.LineEdit
-	bossOverlay *Overlay
-	hpCB        *walk.CheckBox
-	hpLbl       *walk.Label
-	hpZoneLbl   *walk.Label
-	boldCB      *walk.CheckBox
-	colorSw     *walk.Composite
-	colorLbl    *walk.Label
-	outlineCB   *walk.CheckBox
-	outlineNE   *walk.NumberEdit
-	outlineSw   *walk.Composite
-	outlineLbl  *walk.Label
-	urlLE       *walk.LineEdit
-	server      *OverlayServer
-	swBrushes   []*walk.SolidColorBrush
-	editPosPB   *walk.PushButton
-	volSlider   *walk.Slider
-	soundLbl    *walk.Label
-	ocrCB       *walk.CheckBox
-	ocrLbl      *walk.Label
-	kwLE        *walk.LineEdit
+	langCB     *walk.ComboBox
+	ocrLangs   []OcrLang
+	hpCB       *walk.CheckBox
+	hpLbl      *walk.Label
+	hpZoneLbl  *walk.Label
+	boldCB     *walk.CheckBox
+	colorSw    *walk.Composite
+	colorLbl   *walk.Label
+	outlineCB  *walk.CheckBox
+	outlineNE  *walk.NumberEdit
+	outlineSw  *walk.Composite
+	outlineLbl *walk.Label
+	urlLE      *walk.LineEdit
+	server     *OverlayServer
+	swBrushes  []*walk.SolidColorBrush
+	editPosPB  *walk.PushButton
+	volSlider  *walk.Slider
+	soundLbl   *walk.Label
+	ocrCB      *walk.CheckBox
+	ocrLbl     *walk.Label
+	kwLE       *walk.LineEdit
 
 	overlay    *Overlay
 	sound      Sound
@@ -410,7 +400,7 @@ func (a *App) buildUI() error {
 					PushButton{Text: "Mở", OnClicked: a.openDataDir},
 				),
 			),
-			hint("Gồm số đếm, ảnh mẫu, thống kê boss, cài đặt. Nằm cạnh file Byrgenwerth.exe."),
+			hint("Gồm số đếm, ảnh mẫu, cài đặt. Nằm cạnh file Byrgenwerth.exe."),
 			sep(),
 			title("Gỡ cài đặt"),
 			row(
@@ -419,65 +409,6 @@ func (a *App) buildUI() error {
 			),
 			hint("Xóa app, toàn bộ dữ liệu, shortcut và mục trong Apps & features. Không hoàn tác được."),
 			VSpacer{},
-		},
-	}
-
-	bossTab := TabPage{
-		Title:  "Boss",
-		Layout: pageLayout,
-		Children: []Widget{
-			title("Theo dõi boss"),
-			CheckBox{AssignTo: &a.bossCB, Text: "Ghi nhận boss khi chết (OCR tên trên thanh máu)", OnCheckedChanged: a.onBossTrackChanged},
-			form(
-				Label{Text: "Đang đánh"}, Label{AssignTo: &a.bossNowLbl, Text: "--", EllipsisMode: EllipsisEnd},
-				Label{Text: "Vùng tên boss"}, row(
-					Label{AssignTo: &a.bossZoneLbl, Text: "Tự động", StretchFactor: 3},
-					PushButton{Text: "Khoanh vùng...", OnClicked: a.editBossZone},
-					PushButton{Text: "Tự động", OnClicked: func() {
-						if a.cur != nil {
-							a.cur.BossROI = ROI{}
-							a.store.SaveProfile(a.cur)
-							a.refreshBossZoneLabel()
-						}
-					}},
-				),
-			),
-			hint("Tên boss đứng yên trên màn hình vài giây mới được ghi nhận, phụ đề sẽ bị bỏ qua."),
-			sep(),
-			title("Thống kê"),
-			ListBox{AssignTo: &a.bossLB, MinSize: Size{Height: 110}},
-			row(
-				PushButton{Text: "Đổi tên...", OnClicked: a.renameBoss},
-				PushButton{Text: "Gộp vào...", OnClicked: a.mergeBoss},
-				PushButton{Text: "Xóa", OnClicked: a.removeBoss},
-				HSpacer{},
-				PushButton{Text: "Xóa hết", OnClicked: a.clearBosses},
-			),
-			sep(),
-			title("Bảng Top 3"),
-			CheckBox{AssignTo: &a.panelCB, Text: "Hiện bảng nổi trên màn hình", Checked: a.cfg.BossPanelEnabled, OnCheckedChanged: a.onPanelEnabledChanged},
-			form(
-				Label{Text: "Cỡ chữ"}, row(
-					NumberEdit{AssignTo: &a.panelFontNE, MinValue: 10, MaxValue: 80, Decimals: 0, Value: float64(a.cfg.BossPanelFontSize), SpinButtonsVisible: true, MaxSize: Size{Width: 80}, OnValueChanged: a.onPanelFontChanged},
-					Label{Text: "px"},
-					HSpacer{},
-				),
-				Label{Text: "Vị trí"}, row(
-					PushButton{AssignTo: &a.editPanelPB, Text: "Chỉnh vị trí bảng", OnClicked: a.togglePanelEdit},
-					PushButton{Text: "Đặt lại", OnClicked: a.resetPanelPos},
-					HSpacer{},
-				),
-				Label{Text: "OBS"}, row(
-					LineEdit{AssignTo: &a.bossURLLE, ReadOnly: true, Text: "(đang khởi động...)", StretchFactor: 3},
-					PushButton{Text: "Copy", OnClicked: func() {
-						if a.server != nil {
-							walk.Clipboard().SetText(a.server.BossURL())
-							a.setStatus("Đã copy URL bảng boss. OBS: Sources → + → Browser, Width 600, Height 300.")
-						}
-					}},
-				),
-			),
-			hint("Tên game, tổng số lần chết, rồi top 3 boss. Dùng màu và viền chữ ở tab Hiển thị; ▶ là boss đang đánh."),
 		},
 	}
 
@@ -525,7 +456,7 @@ func (a *App) buildUI() error {
 						PushButton{Text: "−1", MinSize: Size{Width: 56}, OnClicked: func() { a.addDeath(-1, "button") }},
 						PushButton{Text: "Reset", OnClicked: a.resetCount},
 					),
-					TabWidget{Pages: []TabPage{detectTab, displayTab, soundTab, bossTab}},
+					TabWidget{Pages: []TabPage{detectTab, displayTab, soundTab}},
 					Label{AssignTo: &a.hkLbl, Text: "", TextColor: hintColor},
 				},
 			},
@@ -544,11 +475,9 @@ func (a *App) init() {
 	}
 
 	a.loadSound()
-	a.tracker = NewBossTracker()
 	if srv, err := StartOverlayServer(a.cfg.ServerPort); err == nil {
 		a.server = srv
 		a.urlLE.SetText(srv.URL())
-		a.bossURLLE.SetText(srv.BossURL())
 	} else {
 		a.urlLE.SetText("Không mở được: " + err.Error())
 	}
@@ -558,7 +487,6 @@ func (a *App) init() {
 	a.suppress = false
 	a.outlineNE.SetEnabled(a.cfg.Outline)
 	a.initOverlay()
-	a.initBossPanel()
 	a.initTranslation()
 
 	var err error
@@ -610,7 +538,6 @@ func (a *App) init() {
 		a.wg.Wait()
 		a.hk.Stop()
 		a.overlay.Destroy()
-		a.bossOverlay.Destroy()
 		a.subtitle.Destroy()
 		a.server.Close()
 		a.sound.Close()
@@ -632,9 +559,6 @@ func (a *App) init() {
 					if a.cfg.OverlayEnabled && !a.overlay.Editing() {
 						a.overlay.KeepOnTop()
 					}
-					if a.cfg.BossPanelEnabled && !a.bossOverlay.Editing() {
-						a.bossOverlay.KeepOnTop()
-					}
 					if a.translation.on {
 						a.subtitle.KeepOnTop()
 					}
@@ -646,7 +570,7 @@ func (a *App) init() {
 
 // ---------- windows on screen ----------
 
-// ownRects returns the app's visible windows (main window, overlay, boss panel)
+// ownRects returns the app's visible windows (main window, overlay, subtitle)
 // normalized to the game monitor, so OCR can ignore the app's own text.
 func (a *App) ownRects() []ROI {
 	mon := a.currentMonitor().Rect
@@ -654,9 +578,6 @@ func (a *App) ownRects() []ROI {
 	hwnds := []win.HWND{a.mw.Handle()}
 	if a.overlay != nil {
 		hwnds = append(hwnds, a.overlay.hwnd)
-	}
-	if a.bossOverlay != nil {
-		hwnds = append(hwnds, a.bossOverlay.hwnd)
 	}
 	if s := a.subtitle; s != nil {
 		hwnds = append(hwnds, s.hwnd)
@@ -1178,7 +1099,6 @@ func (a *App) loadProfile(p *Profile) {
 	a.suppress = true
 	a.autoCB.SetChecked(p.AutoEnabled)
 	a.ocrCB.SetChecked(p.OcrEnabled)
-	a.bossCB.SetChecked(p.BossTrack)
 	a.hpCB.SetChecked(p.HPEnabled)
 	a.thrSlider.SetValue(int(p.Threshold*100 + 0.5))
 	a.thrLbl.SetText(fmt.Sprintf("%d%%", int(p.Threshold*100+0.5)))
@@ -1190,16 +1110,10 @@ func (a *App) loadProfile(p *Profile) {
 	a.refreshKeywordsUI()
 	a.refreshCount()
 	a.reloadTemplates()
-	if a.tracker != nil {
-		a.tracker.Reset()
-	}
-	a.curBoss, a.lastBossHit = "", ""
-	a.deathNoBoss, a.ocrProven = time.Time{}, false
+	a.ocrProven = false
 	a.refreshLangUI()
-	a.refreshBossZoneLabel()
 	a.hpDet = NewHPDeath(p.HPFull)
 	a.refreshHPLabel()
-	a.refreshBosses()
 }
 
 func (a *App) onProfileChanged() {
@@ -1513,7 +1427,6 @@ func (a *App) onStyleChanged() {
 	a.saveConfig()
 	a.applyStyleToOverlay()
 	a.refreshCount()
-	a.refreshBosses() // the boss panel shares the text style
 }
 
 func (a *App) pickColor(outline bool) {
@@ -1534,7 +1447,6 @@ func (a *App) pickColor(outline bool) {
 	a.refreshSwatches()
 	a.applyStyleToOverlay()
 	a.refreshCount()
-	a.refreshBosses() // the boss panel shares the text style
 }
 
 func (a *App) refreshSwatches() {
@@ -1737,9 +1649,7 @@ func (a *App) onPresetChanged() {
 	}
 	a.store.SaveProfile(a.cur)
 	a.det.Reset()
-	a.tracker.Reset()
 	a.refreshKeywordsUI()
-	a.refreshBossZoneLabel()
 	a.setStatus("Đã áp dụng mẫu theo game.")
 }
 
@@ -1786,294 +1696,8 @@ func (a *App) onLangChanged() {
 		a.cur.OcrLang = ""
 	}
 	a.store.SaveProfile(a.cur)
-	a.tracker.Reset()
 	a.updateLoop()
 	a.setStatus("Đã đổi ngôn ngữ OCR cho game này.")
-}
-
-// ---------- boss tracking ----------
-
-func (a *App) refreshBossZoneLabel() {
-	if a.cur == nil || a.bossZoneLbl == nil {
-		return
-	}
-	if a.cur.BossROI.W > 0 && a.cur.BossROI.H > 0 {
-		r := a.cur.BossROI
-		a.bossZoneLbl.SetText(fmt.Sprintf("x %d%%, y %d%%, %d×%d%%", int(r.X*100), int(r.Y*100), int(r.W*100), int(r.H*100)))
-	} else if a.presetBossZone() != nil {
-		a.bossZoneLbl.SetText("Theo mẫu game (" + a.cur.Preset + ")")
-	} else {
-		a.bossZoneLbl.SetText("Tự động: trên + dưới")
-	}
-}
-
-func (a *App) editBossZone() {
-	if a.cur == nil {
-		return
-	}
-	init := a.cur.BossROI
-	if init.W <= 0 {
-		if z := a.presetBossZone(); z != nil {
-			init = *z
-		} else {
-			init = DefaultBossZones[0]
-		}
-	}
-	a.editRegion("Vùng tên boss - "+a.cur.Name,
-		"Kéo chuột khoanh vùng có TÊN BOSS (thường ngay trên thanh máu boss).\nĐể rộng một chút cho tên dài; tránh lấy phụ đề.",
-		init, false, func(r ROI) {
-			a.cur.BossROI = r
-			a.store.SaveProfile(a.cur)
-			a.tracker.Reset()
-			a.refreshBossZoneLabel()
-			a.setStatus("Đã lưu vùng tên boss.")
-		})
-}
-
-func (a *App) onBossTrackChanged() {
-	if a.suppress || a.cur == nil || a.bossCB == nil {
-		return
-	}
-	a.cur.BossTrack = a.bossCB.Checked()
-	a.store.SaveProfile(a.cur)
-	a.tracker.Reset()
-	a.curBoss = ""
-	a.updateLoop()
-	a.refreshBosses()
-}
-
-// refreshBosses updates the list, the on-screen panel and the OBS page.
-func (a *App) refreshBosses() {
-	if a.cur == nil || a.bossLB == nil {
-		return
-	}
-	a.bossList = SortedBosses(a.cur)
-	items := make([]string, len(a.bossList))
-	for i, b := range a.bossList {
-		items[i] = fmt.Sprintf("%3d   %s", b.Deaths, b.Name)
-	}
-	sel := a.bossLB.CurrentIndex()
-	a.suppress = true
-	a.bossLB.SetModel(items)
-	if sel >= 0 && sel < len(items) {
-		a.bossLB.SetCurrentIndex(sel)
-	}
-	a.suppress = false
-
-	now := "--"
-	if !a.cur.BossTrack {
-		now = "(đang tắt)"
-	} else if a.curBoss != "" {
-		now = a.curBoss
-	}
-	a.bossNowLbl.SetText(now)
-
-	ow := 0
-	if a.cfg.Outline {
-		ow = a.cfg.OutlineWidth
-	}
-	st := SplitsState{
-		Title: a.cur.Name, Rows: BuildSplits(a.cur, a.curBoss, 3), Total: a.cur.Deaths,
-		FontSize: a.cfg.BossPanelFontSize, Font: a.cfg.FontFamily,
-		Color: a.cfg.TextColor, Bold: a.cfg.FontBold, OutlineWidth: ow, OutlineColor: a.cfg.OutlineColor,
-	}
-	a.server.SetSplits(st)
-	if o := a.bossOverlay; o != nil {
-		o.Splits = &st
-		o.FontSize = a.cfg.BossPanelFontSize
-		o.FontFamily = a.cfg.FontFamily
-		o.Color = MustHex(a.cfg.TextColor, RGB{255, 255, 255})
-		o.OutlineColor = MustHex(a.cfg.OutlineColor, RGB{})
-		o.OutlineWidth = ow
-		o.Render()
-	}
-}
-
-func (a *App) selectedBoss() (BossStat, bool) {
-	i := a.bossLB.CurrentIndex()
-	if a.cur == nil || i < 0 || i >= len(a.bossList) {
-		a.setStatus("Chọn một boss trong danh sách trước.")
-		return BossStat{}, false
-	}
-	return a.bossList[i], true
-}
-
-func (a *App) renameBoss() {
-	b, ok := a.selectedBoss()
-	if !ok {
-		return
-	}
-	name, ok := a.prompt("Đổi tên boss", "Tên đúng của boss:", b.Name)
-	if !ok || strings.TrimSpace(name) == "" {
-		return
-	}
-	RenameBoss(a.cur, b.Name, name)
-	a.store.SaveProfile(a.cur)
-	a.refreshBosses()
-}
-
-func (a *App) mergeBoss() {
-	b, ok := a.selectedBoss()
-	if !ok {
-		return
-	}
-	var others []string
-	for _, x := range a.bossList {
-		if x.Name != b.Name {
-			others = append(others, x.Name)
-		}
-	}
-	if len(others) == 0 {
-		a.setStatus("Không có boss nào khác để gộp.")
-		return
-	}
-	i, ok := a.promptChoice("Gộp boss", fmt.Sprintf("Gộp \"%s\" (%d lần) vào:", b.Name, b.Deaths), others)
-	if !ok {
-		return
-	}
-	MergeBoss(a.cur, b.Name, others[i])
-	a.store.SaveProfile(a.cur)
-	a.refreshBosses()
-	a.setStatus("Đã gộp vào \"" + others[i] + "\".")
-}
-
-func (a *App) removeBoss() {
-	b, ok := a.selectedBoss()
-	if !ok {
-		return
-	}
-	if walk.MsgBox(a.mw, "Xóa boss", fmt.Sprintf("Xóa \"%s\" khỏi thống kê?\n(Tổng số lần chết không đổi.)", b.Name), walk.MsgBoxYesNo|walk.MsgBoxIconQuestion) != walk.DlgCmdYes {
-		return
-	}
-	RemoveBoss(a.cur, b.Name)
-	a.store.SaveProfile(a.cur)
-	a.refreshBosses()
-}
-
-func (a *App) clearBosses() {
-	if a.cur == nil || len(a.cur.Bosses) == 0 {
-		return
-	}
-	if walk.MsgBox(a.mw, "Xóa hết", "Xóa toàn bộ thống kê boss của game này?\n(Tổng số lần chết không đổi.)", walk.MsgBoxYesNo|walk.MsgBoxIconWarning) != walk.DlgCmdYes {
-		return
-	}
-	a.cur.Bosses = nil
-	a.store.SaveProfile(a.cur)
-	a.refreshBosses()
-}
-
-// promptChoice asks the user to pick one option; the index is read before the dialog closes.
-func (a *App) promptChoice(title, label string, options []string) (int, bool) {
-	var dlg *walk.Dialog
-	var cb *walk.ComboBox
-	var okPB, cancelPB *walk.PushButton
-	result := 0
-	res, err := Dialog{
-		AssignTo: &dlg, Title: title, DefaultButton: &okPB, CancelButton: &cancelPB,
-		MinSize: Size{Width: 360, Height: 130}, Layout: VBox{}, Font: uiFont,
-		Children: []Widget{
-			Label{Text: label},
-			ComboBox{AssignTo: &cb, Model: options, CurrentIndex: 0},
-			Composite{Layout: HBox{MarginsZero: true}, Children: []Widget{
-				HSpacer{},
-				PushButton{AssignTo: &okPB, Text: "OK", OnClicked: func() {
-					result = cb.CurrentIndex()
-					dlg.Accept()
-				}},
-				PushButton{AssignTo: &cancelPB, Text: "Hủy", OnClicked: func() { dlg.Cancel() }},
-			}},
-		},
-	}.Run(a.mw)
-	if err != nil || res != walk.DlgCmdOK || result < 0 {
-		return 0, false
-	}
-	return result, true
-}
-
-// ---------- boss panel overlay ----------
-
-func (a *App) initBossPanel() {
-	x, y, ok := ClampToMonitors(a.cfg.BossPanelX, a.cfg.BossPanelY, a.monitorRects())
-	if !a.cfg.BossPanelPosSet || !ok {
-		x, y = a.defaultPanelPos()
-	}
-	o, err := NewOverlay(x, y)
-	if err != nil {
-		a.setStatus("Không tạo được bảng boss: " + err.Error())
-		return
-	}
-	a.bossOverlay = o
-	o.FontSize = a.cfg.BossPanelFontSize
-	o.FontFamily = a.cfg.FontFamily
-	o.Splits = &SplitsState{}
-	o.OnMoved = func(x, y int32) {
-		a.cfg.BossPanelX, a.cfg.BossPanelY, a.cfg.BossPanelPosSet = x, y, true
-		a.saveConfig()
-	}
-	o.Render()
-	o.Show(a.cfg.BossPanelEnabled)
-}
-
-// defaultPanelPos: top-right area of the primary monitor.
-func (a *App) defaultPanelPos() (int32, int32) {
-	if len(a.monitors) == 0 {
-		return 50, 50
-	}
-	r := a.monitors[0].Rect
-	return r.R - int32(a.cfg.BossPanelFontSize*22) - 40, r.T + 40
-}
-
-func (a *App) onPanelEnabledChanged() {
-	if a.panelCB == nil {
-		return
-	}
-	a.cfg.BossPanelEnabled = a.panelCB.Checked()
-	a.saveConfig()
-	if !a.cfg.BossPanelEnabled && a.bossOverlay.Editing() {
-		a.togglePanelEdit()
-	}
-	a.refreshBosses()
-	a.bossOverlay.Show(a.cfg.BossPanelEnabled)
-}
-
-func (a *App) onPanelFontChanged() {
-	if a.panelFontNE == nil {
-		return
-	}
-	a.cfg.BossPanelFontSize = int(a.panelFontNE.Value())
-	a.saveConfig()
-	a.refreshBosses()
-}
-
-func (a *App) togglePanelEdit() {
-	if a.bossOverlay == nil {
-		return
-	}
-	if a.bossOverlay.Editing() {
-		a.bossOverlay.SetEditing(false)
-		a.editPanelPB.SetText("Chỉnh vị trí bảng")
-		a.cfg.BossPanelX, a.cfg.BossPanelY, a.cfg.BossPanelPosSet = a.bossOverlay.X, a.bossOverlay.Y, true
-		a.saveConfig()
-		a.setStatus("Đã lưu vị trí bảng boss.")
-		return
-	}
-	if !a.cfg.BossPanelEnabled {
-		a.panelCB.SetChecked(true)
-	}
-	a.bossOverlay.SetEditing(true)
-	a.bossOverlay.Show(true)
-	a.editPanelPB.SetText("Xong, lưu vị trí")
-	a.setStatus("Kéo bảng boss (viền vàng) tới vị trí bất kỳ, rồi bấm \"Xong, lưu vị trí\".")
-}
-
-func (a *App) resetPanelPos() {
-	if a.bossOverlay == nil {
-		return
-	}
-	x, y := a.defaultPanelPos()
-	a.bossOverlay.MoveTo(x, y)
-	a.cfg.BossPanelX, a.cfg.BossPanelY, a.cfg.BossPanelPosSet = x, y, true
-	a.saveConfig()
 }
 
 // ---------- health bar ----------
@@ -2116,14 +1740,12 @@ func (a *App) calibrateHP() {
 	mon := a.currentMonitor()
 	a.mw.SetVisible(false)
 	a.overlay.Show(false)
-	a.bossOverlay.Show(false)
 	time.AfterFunc(500*time.Millisecond, func() {
 		a.mw.Synchronize(func() {
 			ow, oh := OcrSize(mon)
 			shot, err := CaptureMonitorScaled(mon, ow, oh)
 			a.mw.SetVisible(true)
 			a.overlay.Show(a.cfg.OverlayEnabled)
-			a.bossOverlay.Show(a.cfg.BossPanelEnabled)
 			if err != nil {
 				a.setStatus("Không chụp được màn hình: " + err.Error())
 				return

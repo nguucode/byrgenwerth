@@ -27,7 +27,6 @@ func (f *fakeUI) ownRects() []ROI                  { return f.own }
 func (f *fakeUI) inGame() bool                     { return f.game }
 func (f *fakeUI) playSound()                       { f.sounds++ }
 func (f *fakeUI) refreshCount()                    { f.counts++ }
-func (f *fakeUI) refreshBosses()                   {}
 func (f *fakeUI) refreshROILabel()                 {}
 func (f *fakeUI) reloadTemplates()                 {}
 func (f *fakeUI) trSrcText(s string)               { f.src = s }
@@ -41,12 +40,12 @@ func newTestEngine(t *testing.T) (*Engine, *fakeUI) {
 	t.Helper()
 	ui := &fakeUI{game: true}
 	e := &Engine{ui: ui, store: &Store{Dir: t.TempDir()}, cfg: DefaultConfig(), quit: make(chan struct{}), ocrAvailable: true,
-		monitors: []Monitor{{Rect: PxRect{R: 1920, B: 1080}, Primary: true}}, tracker: NewBossTracker()}
+		monitors: []Monitor{{Rect: PxRect{R: 1920, B: 1080}, Primary: true}}}
 	p, err := e.store.CreateProfile("Dark Souls")
 	if err != nil {
 		t.Fatal(err)
 	}
-	p.AutoEnabled, p.OcrEnabled, p.BossTrack = true, true, true
+	p.AutoEnabled, p.OcrEnabled = true, true
 	e.cur = p
 	e.det = NewDetector(p.Threshold, 15*time.Second)
 	return e, ui
@@ -140,5 +139,18 @@ func TestEngineRefusesARegionWithTooMuchText(t *testing.T) {
 	e.onStableLine(tr.loop.gen, strings.Repeat("a", MaxTranslateChars+1), StableText)
 	if !strings.Contains(ui.subtitle, "quá nhiều chữ") {
 		t.Fatalf("subtitle %q", ui.subtitle)
+	}
+}
+
+func TestOcrOffStopsTheOcrLoop(t *testing.T) {
+	e, _ := newTestEngine(t)
+	e.updateLoop()
+	if !e.loop.ocr || !e.loop.enabled {
+		t.Fatalf("OCR on must run the loop: %+v", e.loop)
+	}
+	e.cur.OcrEnabled = false
+	e.updateLoop()
+	if e.loop.ocr || e.loop.enabled {
+		t.Fatalf("OCR off with no templates or health bar must not capture: %+v", e.loop)
 	}
 }

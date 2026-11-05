@@ -285,12 +285,6 @@ type Config struct {
 	OutlineColor string `json:"outline_color"` // #RRGGBB
 	ServerPort   int    `json:"server_port"`
 
-	BossPanelEnabled  bool  `json:"boss_panel_enabled"`
-	BossPanelX        int32 `json:"boss_panel_x"`
-	BossPanelY        int32 `json:"boss_panel_y"`
-	BossPanelPosSet   bool  `json:"boss_panel_pos_set"`
-	BossPanelFontSize int   `json:"boss_panel_font_size"`
-
 	Keywords     []string `json:"keywords"`
 	OcrMinHeight float64  `json:"ocr_min_height"` // min text height, fraction of screen height
 
@@ -331,7 +325,6 @@ func DefaultConfig() Config {
 		OutlineColor: "#000000",
 		ServerPort:   17321,
 
-		BossPanelFontSize: 18,
 		TranslateFontSize: 28,
 
 		Keywords:     append([]string(nil), DefaultKeywords...),
@@ -340,29 +333,26 @@ func DefaultConfig() Config {
 }
 
 type Profile struct {
-	ID          string     `json:"-"`
-	Name        string     `json:"name"`
-	Deaths      int        `json:"deaths"`
-	Threshold   float64    `json:"threshold"`
-	CooldownSec float64    `json:"cooldown_sec"`
-	AutoEnabled bool       `json:"auto_enabled"`
-	OcrEnabled  bool       `json:"ocr_enabled"`
-	Preset      string     `json:"preset,omitempty"`   // game preset name, "" = generic
-	Keywords    []string   `json:"keywords,omitempty"` // empty = use global keywords
-	OcrLang     string     `json:"ocr_lang,omitempty"` // "" = Windows user languages
-	BossTrack   bool       `json:"boss_track"`
-	BossROI     ROI        `json:"boss_roi"` // zero = automatic zones
-	Bosses      []BossStat `json:"bosses,omitempty"`
-	HPEnabled   bool       `json:"hp_enabled"`
-	HPZone      ROI        `json:"hp_zone"`
-	HPColor     HPColor    `json:"hp_color"`
-	HPFull      float64    `json:"hp_full"`
-	ROI         ROI        `json:"roi"`
-	Templates   []string   `json:"templates"` // file names inside templates/
+	ID          string   `json:"-"`
+	Name        string   `json:"name"`
+	Deaths      int      `json:"deaths"`
+	Threshold   float64  `json:"threshold"`
+	CooldownSec float64  `json:"cooldown_sec"`
+	AutoEnabled bool     `json:"auto_enabled"`
+	OcrEnabled  bool     `json:"ocr_enabled"`
+	Preset      string   `json:"preset,omitempty"`   // game preset name, "" = generic
+	Keywords    []string `json:"keywords,omitempty"` // empty = use global keywords
+	OcrLang     string   `json:"ocr_lang,omitempty"` // "" = Windows user languages
+	HPEnabled   bool     `json:"hp_enabled"`
+	HPZone      ROI      `json:"hp_zone"`
+	HPColor     HPColor  `json:"hp_color"`
+	HPFull      float64  `json:"hp_full"`
+	ROI         ROI      `json:"roi"`
+	Templates   []string `json:"templates"` // file names inside templates/
 }
 
 func NewProfile(name string) *Profile {
-	return &Profile{Name: name, Threshold: 0.80, CooldownSec: 15, AutoEnabled: true, OcrEnabled: true, BossTrack: true, ROI: FullROI()}
+	return &Profile{Name: name, Threshold: 0.80, CooldownSec: 15, AutoEnabled: true, OcrEnabled: true, ROI: FullROI()}
 }
 
 type Store struct {
@@ -384,7 +374,7 @@ func (s *Store) DebugLogPath() string { return filepath.Join(s.Dir, "ocr-debug.l
 const debugLogMax = 4 << 20
 
 // AppendDebugLog adds one timestamped line to ocr-debug.log: every OCR frame,
-// every count and every boss change, to see afterwards why OCR missed something.
+// every count, to see afterwards why OCR missed something.
 func (s *Store) AppendDebugLog(text string, now time.Time) error {
 	p := s.DebugLogPath()
 	if fi, err := os.Stat(p); err == nil && fi.Size() > debugLogMax {
@@ -491,9 +481,6 @@ func (s *Store) LoadConfig() Config {
 	}
 	if c.OutlineWidth < 0 || c.OutlineWidth > 30 {
 		c.OutlineWidth = d.OutlineWidth
-	}
-	if c.BossPanelFontSize < 10 || c.BossPanelFontSize > 80 {
-		c.BossPanelFontSize = d.BossPanelFontSize
 	}
 	if c.TranslateFontSize < 10 || c.TranslateFontSize > 120 {
 		c.TranslateFontSize = d.TranslateFontSize

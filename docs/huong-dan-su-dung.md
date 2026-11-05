@@ -10,11 +10,10 @@
 4. [Tab Nhận diện: tự đếm số lần chết](#4-tab-nhận-diện-tự-đếm-số-lần-chết)
 5. [Tab Hiển thị: overlay và OBS](#5-tab-hiển-thị-overlay-và-obs)
 6. [Tab Cài đặt: âm thanh và dữ liệu](#6-tab-cài-đặt-âm-thanh-và-dữ-liệu)
-7. [Tab Boss: Top 3 boss](#7-tab-boss-top-3-boss)
-8. [Phím tắt](#8-phím-tắt)
-9. [Dữ liệu được lưu ở đâu](#9-dữ-liệu-được-lưu-ở-đâu)
-10. [Xử lý sự cố](#10-xử-lý-sự-cố)
-11. [Tab Translate: dịch hội thoại theo thời gian thực](#11-tab-translate-dịch-hội-thoại-theo-thời-gian-thực)
+7. [Phím tắt](#7-phím-tắt)
+8. [Dữ liệu được lưu ở đâu](#8-dữ-liệu-được-lưu-ở-đâu)
+9. [Xử lý sự cố](#9-xử-lý-sự-cố)
+10. [Tab Translate: dịch hội thoại theo thời gian thực](#10-tab-translate-dịch-hội-thoại-theo-thời-gian-thực)
 
 ---
 
@@ -48,23 +47,22 @@ App được cài vào `~/Applications`, dữ liệu nằm ở `~/Library/Applic
 - Cho phép **Screen Recording** khi macOS hỏi, rồi mở lại app. App chưa được notarize nên macOS có thể hỏi lại sau mỗi lần cập nhật.
 - API key được lưu trong Keychain.
 - Phím F cần giữ **fn** trên đa số bàn phím Mac, trừ khi đã bật *Use F1, F2 as standard function keys*. F11 cũng là phím Show Desktop mặc định, nên dùng nút **Chụp mẫu ngay** sẽ dễ hơn. Muốn đổi phím tắt thì sửa mục `hotkeys` trong `config.json`.
-- Tên boss được đọc khi cửa sổ của app khác chiếm gần hết màn hình. Cửa sổ trình duyệt lớn cũng tính, nên khi đánh boss đừng để nó ở phía trước.
 - Bản Mac chưa được thử với game thật. Đa số game Windows chạy trên Mac qua lớp dịch, nên khả năng đọc chữ có thể khác.
 
 ## 2. Màn hình chính
 
 Đầu cửa sổ là tên app và phiên bản. Hai nút **Death count** và **Translate** chuyển giữa hai công cụ. Các mục dưới đây thuộc Death count; Translate xem [mục 11](#11-tab-translate-dịch-hội-thoại-theo-thời-gian-thực).
 
-- **Game**: chọn game đang chơi; mỗi game có số đếm, ảnh mẫu, từ khóa và thống kê boss riêng.
+- **Game**: chọn game đang chơi; mỗi game có số đếm, ảnh mẫu và từ khóa riêng.
 - **Số lần chết**: số lớn màu đỏ. Các nút **+1**, **−1** và **Reset** để chỉnh tay.
-- **4 tab**: Nhận diện, Hiển thị, Cài đặt, Boss.
+- **3 tab**: Nhận diện, Hiển thị, Cài đặt.
 - **Cửa sổ app luôn nằm trên**: giữ cửa sổ app nổi trên các cửa sổ khác. Khi một game toàn màn hình (kể cả Borderless) được mở lên trước, cửa sổ app tự thu nhỏ; bấm F7 để gọi lại.
 - Dòng cuối là **trạng thái**: app vừa làm gì, lỗi gì nếu có.
 
 ## 3. Thêm game
 
 1. Bấm **+ Thêm**, gõ tên game, OK.
-2. Nếu tên trùng một trong 100 game có sẵn mẫu (gõ gần đúng là được, ví dụ "elden ring", "wuchang"), app tự nạp từ khóa màn chết và vùng tên boss của game đó.
+2. Nếu tên trùng một trong 100 game có sẵn mẫu (gõ gần đúng là được, ví dụ "elden ring", "wuchang"), app tự nạp từ khóa màn chết của game đó.
 3. **Đổi tên** / **Xóa** để quản lý. Xóa game sẽ xóa luôn số đếm và ảnh mẫu của game đó.
 
 ### Game được hỗ trợ
@@ -101,7 +99,7 @@ Mỗi màn chết chỉ được đếm **một lần**, dù nó hiện bao lâu
 | Bật tự nhận diện | Tắt nếu chỉ muốn đếm bằng tay (F9/F10). |
 | Đọc chữ bằng OCR | Bật/tắt phần đọc chữ. |
 | Trạng thái OCR | App đang đọc thấy gì. Ví dụ `Thấy "DEAD" (cao 4.6%) → KHỚP`. Không tự đếm thì nhìn dòng này trước. |
-| Ngôn ngữ game | Ngôn ngữ OCR. Để "Theo Windows" nếu game tiếng Anh. Game tiếng khác: xem [mục 10](#ocr-không-đọc-được-game-tiếng-trungnhậtviệt). |
+| Ngôn ngữ game | Ngôn ngữ OCR. Để "Theo Windows" nếu game tiếng Anh. Game tiếng khác: xem [mục 9](#ocr-không-đọc-được-game-tiếng-trungnhậtviệt). |
 | Mẫu theo game | Chọn game để nạp đúng từ khóa. "Chung (mọi game)" dùng danh sách chung. Dòng chữ xám bên dưới cho biết game đó đã được xác minh chưa. |
 | Từ khóa | Sửa tay được, cách nhau bằng dấu phẩy. Thêm `*` ở cuối để khớp phần đầu câu, ví dụ `You were slain by *`. |
 | Độ giống | Mức giống giữa màn hình và ảnh mẫu, theo thời gian thực. |
@@ -187,31 +185,7 @@ Bấm **Gỡ Byrgenwerth...** trong tab này, hoặc vào *Settings → Apps →
 
 Không hoàn tác được. Muốn giữ số đếm thì copy `ByrgenwerthData` ra chỗ khác trước.
 
-## 7. Tab Boss: Top 3 boss
-
-### Cách app biết bạn đang đánh boss nào
-
-- App đọc chữ ở **dải trên** và **dải dưới** màn hình, nơi hầu hết game in tên boss trên thanh máu.
-- Một dòng chữ phải **đứng yên khoảng 5 giây** mới được coi là tên boss, nên phụ đề bị loại. Chữ đứng liên tục hơn 15 phút bị coi là HUD.
-- Khi bạn chết, lần chết được tính cho boss vừa thấy trong **30 giây** gần nhất, hoặc cho boss được xác nhận trong vòng 15 giây sau khi chết (game Souls thường chỉ hiện rõ tên trên màn chết). Bấm −1 thì trừ đúng boss đó.
-- App chỉ đọc tên boss khi một game toàn màn hình (kể cả Borderless) đang ở trước, nên chữ trong trình duyệt hay cửa sổ chat bạn chuyển sang bị bỏ qua. Dòng có dấu hai chấm, như dòng nhắc nút bấm ("E : Nghỉ ngơi tại bonfire"), không bao giờ được coi là tên boss.
-
-### Các mục
-
-| Mục | Ý nghĩa |
-|---|---|
-| Ghi nhận boss khi chết | Bật/tắt theo dõi boss cho game này. |
-| Đang đánh | Tên boss app đang thấy. Đánh boss mà dòng này vẫn trống thì xem mục 10. |
-| Vùng tên boss | "Tự động" (dải trên + dưới), "Theo mẫu game" (ví dụ Sekiro: góc trên trái) hoặc vùng bạn tự khoanh. |
-| Thống kê | Danh sách boss và số lần chết. OCR đọc lệch thì dùng **Đổi tên**, **Gộp vào...** (gộp hai tên của cùng một boss), **Xóa**. |
-| Bảng Top 3 | Tên game, một đường kẻ, **Deaths** kèm tổng số lần chết, một đường kẻ, rồi top 3 boss kèm số lần chết. Chỉ có chữ và đường kẻ, theo màu và viền chữ ở tab Hiển thị. ▶ đánh dấu boss đang đánh; boss đó ngoài top 3 thì hiện thêm một dòng. Tên dài bị cắt còn một dòng với "…". |
-
-### Hiện bảng Top 3
-
-- **Trên màn hình**: tick **Hiện bảng nổi trên màn hình**, chỉnh vị trí giống overlay.
-- **Trong OBS**: Copy URL dạng `http://127.0.0.1:17321/bosses` → OBS *Browser* source, Width 600, Height 300.
-
-## 8. Phím tắt
+## 7. Phím tắt
 
 | Phím | Tác dụng |
 |---|---|
@@ -226,24 +200,24 @@ Không hoàn tác được. Muốn giữ số đếm thì copy `ByrgenwerthData`
 Phím tắt hoạt động cả khi đang ở trong game. Game sẽ không nhận được các phím này.
 Đổi phím: mở `config.json` trong thư mục dữ liệu, sửa mục `hotkeys` (ví dụ `"add": "Ctrl+F9"`), rồi mở lại app.
 
-## 9. Dữ liệu được lưu ở đâu
+## 8. Dữ liệu được lưu ở đâu
 
 Trong thư mục `ByrgenwerthData` cạnh file `Byrgenwerth.exe` (nút **Mở** ở tab Cài đặt):
 
 | File | Nội dung |
 |---|---|
 | `config.json` | Cài đặt chung: phím tắt, kiểu chữ, vị trí overlay... |
-| `profiles\<game>\profile.json` | Số đếm, từ khóa, thống kê boss của từng game. |
+| `profiles\<game>\profile.json` | Số đếm và từ khóa của từng game. |
 | `profiles\<game>\templates\` | Ảnh mẫu màn chết. |
 | `history.csv` | Nhật ký từng lần +1/−1, mở bằng Excel được. |
 | `obs_deaths.txt` | File text cho OBS (nếu bật). |
-| `ocr-debug.log` | Mọi lần OCR đọc lúc game toàn màn hình đang ở trước (chữ, vị trí, cỡ chữ), mọi lần đếm và mọi lần đổi boss. Đầy 4 MB thì chuyển sang `ocr-debug.old.log`. Gửi kèm khi báo lỗi. |
+| `ocr-debug.log` | Mọi lần OCR đọc lúc game toàn màn hình đang ở trước (chữ, vị trí, cỡ chữ), và mọi lần đếm. Đầy 4 MB thì chuyển sang `ocr-debug.old.log`. Gửi kèm khi báo lỗi. |
 | `translate.key` | API key Anthropic, mã hóa theo tài khoản Windows của bạn. |
 | `ocr-misses.log` | Chữ OCR đọc được trong 10 giây trước mỗi lần bấm F9 +1, tức là những lần app bỏ sót. Gửi kèm khi báo lỗi. |
 
 Sao lưu: copy cả thư mục này.
 
-## 10. Xử lý sự cố
+## 9. Xử lý sự cố
 
 ### Chết mà không tự đếm
 - Bấm F9 ngay: app cộng 1 và ghi những gì OCR đọc được vào `ocr-misses.log` trong thư mục dữ liệu. File này cho biết vì sao bị sót.
@@ -258,7 +232,7 @@ Sao lưu: copy cả thư mục này.
 - Xem tab Nhận diện: xóa ảnh mẫu chụp sai, tăng **Ngưỡng**, khoanh **Vùng nhận diện** sát hơn.
 
 ### Phím tắt không chạy
-Dòng trạng thái báo "Cảnh báo phím tắt" nghĩa là phần mềm khác đang giữ phím đó. Đổi phím trong `config.json` (mục 8).
+Dòng trạng thái báo "Cảnh báo phím tắt" nghĩa là phần mềm khác đang giữ phím đó. Đổi phím trong `config.json` (mục 7).
 
 ### Overlay không hiện trên game
 Game đang ở Exclusive Fullscreen. Chuyển sang Borderless.
@@ -268,17 +242,11 @@ Game đang ở Exclusive Fullscreen. Chuyển sang Borderless.
 2. Mở lại app, chọn ngôn ngữ đó ở **Ngôn ngữ game** (tab Nhận diện).
 3. Thêm từ khóa màn chết bằng ngôn ngữ đó vào ô **Từ khóa**. Không cần đúng dấu: "BẠN ĐÃ CHẾT" khớp cả "BAN DA CHET". Mẫu của các game hiện "YOU DIED" đã có sẵn "BẠN ĐÃ CHẾT" cho bản Việt hóa.
 
-### Boss không được ghi nhận
-- **Thống kê** chỉ có dữ liệu khi bạn chết: boss hiện trong danh sách sau lần đầu nó giết bạn, không phải lúc thanh máu boss xuất hiện.
-- Xem dòng **Đang đánh** trong lúc đánh boss.
-- Trống: tên boss có thể nằm ngoài vùng tự động hoặc chữ quá nhỏ. Bấm **Khoanh vùng...** ở tab Boss và khoanh quanh tên boss.
-- Ra sai tên (bắt nhầm chữ khác): khoanh vùng hẹp hơn, sửa tên trong **Thống kê**.
-
 ### OBS không hiện Browser Source
 - App phải đang mở.
 - Kiểm tra URL: cổng có thể khác 17321 nếu cổng đó bận; luôn copy URL từ app.
 
-## 11. Tab Translate: dịch hội thoại theo thời gian thực
+## 10. Tab Translate: dịch hội thoại theo thời gian thực
 
 App đọc vùng hội thoại trong game và hiện bản dịch tiếng Việt trong một khung ngay cạnh vùng đó. Hiện chỉ dịch từ tiếng Anh sang tiếng Việt.
 

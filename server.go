@@ -34,12 +34,11 @@ func StateFromConfig(c Config, text string) OverlayState {
 }
 
 type OverlayServer struct {
-	mu     sync.Mutex
-	state  OverlayState
-	splits SplitsState
-	ln     net.Listener
-	srv    *http.Server
-	mux    *http.ServeMux
+	mu    sync.Mutex
+	state OverlayState
+	ln    net.Listener
+	srv   *http.Server
+	mux   *http.ServeMux
 }
 
 // StartOverlayServer listens on 127.0.0.1, trying port..port+20.
@@ -61,8 +60,6 @@ func StartOverlayServer(port int) (*OverlayServer, error) {
 	s.mux = mux
 	mux.HandleFunc("/", s.handlePage)
 	mux.HandleFunc("/state", s.handleState)
-	mux.HandleFunc("/bosses", s.handleBossPage)
-	mux.HandleFunc("/bosses/state", s.handleBossState)
 	s.srv = &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	go s.srv.Serve(ln)
 	return s, nil
@@ -160,79 +157,3 @@ func RequireToken(token string, next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
-
-func (s *OverlayServer) SetSplits(st SplitsState) {
-	if s == nil {
-		return
-	}
-	s.mu.Lock()
-	st.Version = s.splits.Version + 1
-	s.splits = st
-	s.mu.Unlock()
-}
-
-func (s *OverlayServer) BossURL() string {
-	if s == nil {
-		return ""
-	}
-	return s.URL() + "bosses"
-}
-
-func (s *OverlayServer) handleBossState(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	st := s.splits
-	s.mu.Unlock()
-	if st.Rows == nil {
-		st.Rows = []SplitRow{}
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(st)
-}
-
-func (s *OverlayServer) handleBossPage(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	fmt.Fprint(w, bossPage)
-}
-
-// Boss panel: game name, a rule, Deaths with the total, a rule, then one line
-// per boss. Text and rules only, in the overlay text color and outline.
-const bossPage = `<!doctype html>
-<html><head><meta charset="utf-8"><title>Top bosses</title>
-<style>
-html,body{margin:0;background:transparent;overflow:hidden}
-#p{display:inline-block;min-width:10em;padding:8px;line-height:1.25;
-  font-family:var(--f),"Segoe UI",sans-serif;font-size:var(--s)}
-.l{display:flex;justify-content:space-between;gap:1.5em;white-space:nowrap}
-.n{overflow:hidden;text-overflow:ellipsis;max-width:14em}
-.t{max-width:20em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.c{font-variant-numeric:tabular-nums}
-.hr{height:max(2px,.1em);margin:.3em 0;background:currentColor}
-</style></head>
-<body><div id="p"></div>
-<script>
-var v=-1,p=document.getElementById('p');
-function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-// outline: a ring of text-shadows (box-shadow for the rules), like the native stroke
-function ring(w,c){var a=[];for(var i=0;i<16;i++){var t=i*Math.PI/8;a.push((Math.cos(t)*w).toFixed(1)+'px '+(Math.sin(t)*w).toFixed(1)+'px 0 '+c)}return a.join(',')}
-function draw(s){
-  p.style.setProperty('--f','"'+(s.font||'Segoe UI').replace(/"/g,'')+'"');
-  p.style.setProperty('--s',(s.size||18)+'px');
-  p.style.color=s.color||'#fff';
-  p.style.fontWeight=s.bold?'700':'400';
-  var w=s.outlineWidth||0;
-  p.style.textShadow=w?ring(w,s.outlineColor):'none';
-  p.style.padding=(8+w)+'px';
-  var hr='<div class="hr" style="box-shadow:'+(w?'0 0 0 '+w+'px '+s.outlineColor:'none')+'"></div>';
-  var h='<div class="t">'+esc(s.title||'Byrgenwerth')+'</div>'+hr;
-  h+='<div class="l"><span>Deaths</span><span class="c">'+s.total+'</span></div>';
-  if(s.rows.length)h+=hr;
-  s.rows.forEach(function(r){
-    h+='<div class="l"><span class="n">'+(r.active?'▶ ':'')+esc(r.name)+'</span><span class="c">'+r.deaths+'</span></div>';
-  });
-  p.innerHTML=h;
-}
-function tick(){fetch('/bosses/state',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){if(s.v!==v){v=s.v;draw(s)}}).catch(function(){}).then(function(){setTimeout(tick,400)})}
-tick();
-</script></body></html>`

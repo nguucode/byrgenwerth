@@ -33,14 +33,7 @@
    "YOU DIED",
    "BẠN ĐÃ CHẾT"
   ],
-  "ocr": "ok",
-  "note": "Tên boss ở đầu trái thanh máu boss phía dưới.",
-  "boss_zone": {
-   "X": 0.28,
-   "Y": 0.76,
-   "W": 0.47,
-   "H": 0.12
-  }
+  "ocr": "ok"
  },
  {
   "game": "Sekiro: Shadows Die Twice",
@@ -49,13 +42,7 @@
    "DEATH"
   ],
   "ocr": "stylized",
-  "note": "Chữ 死 viết bút lông: OCR tiếng Anh không đọc được. Cài OCR tiếng Nhật hoặc dùng F9. Tên boss ở góc trên bên trái.",
-  "boss_zone": {
-   "X": 0.0,
-   "Y": 0.0,
-   "W": 0.45,
-   "H": 0.22
-  }
+  "note": "Chữ 死 viết bút lông: OCR tiếng Anh không đọc được. Cài OCR tiếng Nhật hoặc dùng F9."
  },
  {
   "game": "Bloodborne",

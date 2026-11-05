@@ -12,11 +12,10 @@ The app's interface is in Vietnamese. This guide gives each label in Vietnamese 
 4. [Nhận diện tab (detection)](#4-nhận-diện-tab-detection)
 5. [Hiển thị tab (display: overlay and OBS)](#5-hiển-thị-tab-display-overlay-and-obs)
 6. [Cài đặt tab (settings: sound and data)](#6-cài-đặt-tab-settings-sound-and-data)
-7. [Boss tab: top 3 bosses](#7-boss-tab-top-3-bosses)
-8. [Hotkeys](#8-hotkeys)
-9. [Where data is stored](#9-where-data-is-stored)
-10. [Troubleshooting](#10-troubleshooting)
-11. [Translate tab: real-time dialogue translation](#11-translate-tab-real-time-dialogue-translation)
+7. [Hotkeys](#7-hotkeys)
+8. [Where data is stored](#8-where-data-is-stored)
+9. [Troubleshooting](#9-troubleshooting)
+10. [Translate tab: real-time dialogue translation](#10-translate-tab-real-time-dialogue-translation)
 
 ---
 
@@ -50,23 +49,22 @@ The app goes to `~/Applications`, with its data in `~/Library/Application Suppor
 - Allow **Screen Recording** when macOS asks, then open the app again. Because the app is not notarized, macOS may ask again after an update.
 - The API key is kept in the Keychain.
 - F keys need **fn** on most Mac keyboards, unless *Use F1, F2 as standard function keys* is on. F11 is also the default Show Desktop shortcut, so **Chụp mẫu ngay** may be the easier way to capture a template. To change hotkeys, edit `hotkeys` in `config.json`.
-- Boss names are read while another app's window fills most of the screen. A large browser window counts too, so keep it out of the way during a fight.
 - The Mac version has not been tried with a game yet. Most Windows games reach a Mac through a translation layer, so expect differences in what can be read.
 
 ## 2. Main window
 
 The header shows the app name and version. **Death count** and **Translate** switch between the two tools. The items below belong to Death count; see [section 11](#11-translate-tab-real-time-dialogue-translation) for Translate.
 
-- **Game**: the game you are playing. Each game has its own count, templates, keywords and boss stats.
+- **Game**: the game you are playing. Each game has its own count, templates and keywords.
 - **Số lần chết** (deaths): the big red number, with **+1**, **−1** and **Reset** buttons.
-- **4 tabs**: Nhận diện (detection), Hiển thị (display), Cài đặt (settings), Boss.
+- **3 tabs**: Nhận diện (detection), Hiển thị (display), Cài đặt (settings).
 - **Cửa sổ app luôn nằm trên**: keep the app window always on top. When a full-screen game (Borderless included) comes to the front, the app window minimizes itself; F7 brings it back.
 - The last line is the **status**: what the app just did, or any error.
 
 ## 3. Add a game
 
 1. Click **+ Thêm** (add), type the game name, OK.
-2. If the name matches one of the 100 presets (close is fine: "elden ring", "wuchang"), its death keywords and boss-name region are loaded automatically.
+2. If the name matches one of the 100 presets (close is fine: "elden ring", "wuchang"), its death keywords are loaded automatically.
 3. **Đổi tên** (rename) / **Xóa** (delete). Deleting a game also deletes its count and templates.
 
 ### Supported games
@@ -189,31 +187,7 @@ Click **Gỡ Byrgenwerth...** (uninstall) in this tab, or use Windows *Settings 
 
 It cannot be undone. To keep your counts, copy `ByrgenwerthData` somewhere first.
 
-## 7. Boss tab: top 3 bosses
-
-### How the current boss is found
-
-- OCR reads the **top** and **bottom** bands of the screen, where most games print the boss name above its health bar.
-- A label must **stay on screen for about 5 seconds** to count as a boss, so subtitles are ignored. A label visible continuously for over 15 minutes is treated as HUD.
-- When you die, the death goes to the boss seen in the last **30 seconds**, or to a boss confirmed within 15 seconds after the death (Souls games often show the name clearly only on the death screen). −1 removes it from that boss.
-- Bosses are only read while a full-screen game (Borderless included) is in front, so text in a browser or chat window you switch to is ignored. Lines with a colon, such as button prompts ("E : Rest at bonfire"), are never boss names.
-
-### Settings
-
-| Label | Meaning |
-|---|---|
-| Ghi nhận boss khi chết | Track bosses for this game. |
-| Đang đánh | The boss currently detected. Empty during a fight? See troubleshooting. |
-| Vùng tên boss | "Tự động" (top + bottom bands), "Theo mẫu game" (preset, e.g. Sekiro: top-left) or your own region. |
-| Thống kê | Bosses and death counts. Fix OCR mistakes with **Đổi tên** (rename), **Gộp vào...** (merge two names of one boss), **Xóa** (delete). |
-| Bảng Top 3 | Game name, a line, **Deaths** with the total, a line, then the top 3 bosses with their counts. Text and lines only, in the color and outline from the Hiển thị tab. ▶ marks the boss you are fighting; if it is outside the top 3 it gets an extra line. Long names are cut to one line with "…". |
-
-### Show the panel
-
-- **On screen**: tick **Hiện bảng nổi trên màn hình**, move it like the overlay.
-- **In OBS**: copy `http://127.0.0.1:17321/bosses` → OBS *Browser* source, Width 600, Height 300.
-
-## 8. Hotkeys
+## 7. Hotkeys
 
 | Key | Action |
 |---|---|
@@ -228,24 +202,24 @@ It cannot be undone. To keep your counts, copy `ByrgenwerthData` somewhere first
 Hotkeys work while in game; the game won't receive these keys.
 To change them, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and restart the app.
 
-## 9. Where data is stored
+## 8. Where data is stored
 
 In `ByrgenwerthData` next to `Byrgenwerth.exe` (button **Mở** in the Cài đặt tab):
 
 | File | Content |
 |---|---|
 | `config.json` | Global settings: hotkeys, text style, overlay positions... |
-| `profiles\<game>\profile.json` | Count, keywords, boss stats per game. |
+| `profiles\<game>\profile.json` | Count and keywords per game. |
 | `profiles\<game>\templates\` | Death-screen templates. |
 | `history.csv` | Log of every +1/−1, opens in Excel. |
 | `obs_deaths.txt` | Text file for OBS (if enabled). |
-| `ocr-debug.log` | Every OCR read while a full-screen game is in front (text, position, height), every count and every boss change. Moved to `ocr-debug.old.log` at 4 MB. Send it with a bug report. |
+| `ocr-debug.log` | Every OCR read while a full-screen game is in front (text, position, height), and every count. Moved to `ocr-debug.old.log` at 4 MB. Send it with a bug report. |
 | `translate.key` | Your Anthropic API key, encrypted with your Windows account. |
 | `ocr-misses.log` | What OCR read in the 10 seconds before each F9 +1, i.e. deaths the app missed. Send it with a bug report. |
 
 Back up by copying the whole folder.
 
-## 10. Troubleshooting
+## 9. Troubleshooting
 
 ### A death is not counted
 - Press F9 right away: it counts the death and writes what OCR read to `ocr-misses.log` in the data folder. That file shows why the death was missed.
@@ -270,17 +244,11 @@ The game is in exclusive fullscreen. Switch to Borderless.
 2. Restart the app and pick it in **Ngôn ngữ game** (Nhận diện tab).
 3. Add that language's death text to **Từ khóa**. Accents don't matter: "BẠN ĐÃ CHẾT" also matches "BAN DA CHET". Presets of games that show "YOU DIED" already include the Vietnamese fan translation "BẠN ĐÃ CHẾT".
 
-### Boss not detected
-- **Thống kê** only fills up when you die: a boss is listed after its first kill, not when its bar appears.
-- Watch **Đang đánh** during the fight.
-- Empty: the name may be outside the automatic bands or too small. Use **Khoanh vùng...** in the Boss tab.
-- Wrong name: draw a tighter region and rename it in **Thống kê**.
-
 ### OBS shows nothing
 - The app must be running.
 - The port may differ from 17321 if it was busy; always copy the URL from the app.
 
-## 11. Translate tab: real-time dialogue translation
+## 10. Translate tab: real-time dialogue translation
 
 The app reads the dialogue region of your game and shows a Vietnamese translation in a box right next to it. English to Vietnamese only.
 

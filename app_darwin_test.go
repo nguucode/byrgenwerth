@@ -166,20 +166,6 @@ func TestCaptureRealScreenThenOcr(t *testing.T) {
 	t.Logf("read %d lines from the screen", len(lines))
 }
 
-func TestBossListReachesThePageWithTheNamesItReads(t *testing.T) {
-	a, h := newWebApp(t)
-	AddBossDeath(a.cur, "Asylum Demon", 2)
-	r := httptest.NewRequest("GET", "http://127.0.0.1:1/api/state?t="+a.token, nil)
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, r)
-	if !strings.Contains(w.Body.String(), `"name":"Asylum Demon"`) || !strings.Contains(w.Body.String(), `"deaths":2`) {
-		t.Fatalf("body %s", w.Body.String())
-	}
-	if !strings.Contains(appPage, "x.deaths + '   ' + x.name") {
-		t.Fatal("the page must read the same field names")
-	}
-}
-
 func TestUninstallLeavesNoConfigBehind(t *testing.T) {
 	a := newApp(t.TempDir())
 	theApp = a

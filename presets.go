@@ -18,8 +18,6 @@ type Preset struct {
 	// "none" no death text at all -> use F9 + templates.
 	OCRHint string `json:"ocr"`
 	Note    string `json:"note"`
-	// BossZone: where this game prints the boss name (nil = default zones).
-	BossZone *ROI `json:"boss_zone,omitempty"`
 }
 
 func LoadPresets() []Preset {

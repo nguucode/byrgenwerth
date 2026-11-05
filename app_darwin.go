@@ -54,13 +54,13 @@ type App struct {
 	sound     *exec.Cmd
 	lastFront bool
 
-	overlay, panel, subtitle C.int
-	overlayEdit, panelEdit   bool
-	subtitleState            subtitleView
-	subtitleVersion          int64
-	uninstalling             bool
-	gotoTranslate            bool // the page should open the Translate tab once
-	pick                     *pickState
+	overlay, subtitle C.int
+	overlayEdit       bool
+	subtitleState     subtitleView
+	subtitleVersion   int64
+	uninstalling      bool
+	gotoTranslate     bool // the page should open the Translate tab once
+	pick              *pickState
 }
 
 type pickState struct {
@@ -117,11 +117,10 @@ func newApp(dir string) *App {
 	tok := make([]byte, 24)
 	rand.Read(tok)
 	a := &App{Engine: Engine{store: &Store{Dir: dir}, quit: make(chan struct{}), ocrAvailable: true},
-		token: hex.EncodeToString(tok), overlay: -1, panel: -1, subtitle: -1}
+		token: hex.EncodeToString(tok), overlay: -1, subtitle: -1}
 	a.ui = a
 	a.cfg = a.store.LoadConfig()
 	a.presets = LoadPresets()
-	a.tracker = NewBossTracker()
 	return a
 }
 
@@ -130,9 +129,8 @@ func (a *App) afterLaunch() {
 	mons := ListMonitors()
 	fonts := fontFamilies()
 	base := a.server.URL()
-	var overlay, panel, subtitle C.int
+	var overlay, subtitle C.int
 	cstr(base, func(u *C.char) { overlay = C.bw_overlay_create(u) })
-	cstr(a.server.BossURL(), func(u *C.char) { panel = C.bw_overlay_create(u) })
 	cstr(base+"subtitle", func(u *C.char) { subtitle = C.bw_overlay_create(u) })
 
 	// May ask for the Keychain password after an update: not while holding the lock.
@@ -143,7 +141,7 @@ func (a *App) afterLaunch() {
 		if a.cfg.Monitor < 0 || a.cfg.Monitor >= len(a.monitors) {
 			a.cfg.Monitor = 0
 		}
-		a.overlay, a.panel, a.subtitle = overlay, panel, subtitle
+		a.overlay, a.subtitle = overlay, subtitle
 		a.translation.ctx, a.translation.cancel = context.WithCancel(context.Background())
 		a.translation.apiKey = apiKey
 		h := a.cfg.Hotkeys
@@ -155,7 +153,6 @@ func (a *App) afterLaunch() {
 		a.placeOverlays()
 		a.applyTop()
 		a.refreshCount()
-		a.refreshBosses()
 		a.updateLoop()
 		switch {
 		case C.bw_screen_access(1) == 0:
@@ -293,21 +290,6 @@ func (a *App) refreshCount() {
 	a.server.Set(StateFromConfig(a.cfg, FormatObs(a.cfg.ObsFormat, a.cur.Name, a.cur.Deaths)))
 }
 
-func (a *App) refreshBosses() {
-	if a.cur == nil || a.server == nil {
-		return
-	}
-	ow := 0
-	if a.cfg.Outline {
-		ow = a.cfg.OutlineWidth
-	}
-	a.server.SetSplits(SplitsState{
-		Title: a.cur.Name, Rows: BuildSplits(a.cur, a.curBoss, 3), Total: a.cur.Deaths,
-		FontSize: a.cfg.BossPanelFontSize, Font: a.cfg.FontFamily,
-		Color: a.cfg.TextColor, Bold: a.cfg.FontBold, OutlineWidth: ow, OutlineColor: a.cfg.OutlineColor,
-	})
-}
-
 func (a *App) reloadTemplates() {
 	a.tmplImgs, a.tmplFeats = nil, nil
 	if a.cur != nil {
@@ -395,12 +377,9 @@ func (a *App) loadProfile(p *Profile) {
 	}
 	a.cfg.CurrentProfile = p.ID
 	a.store.SaveConfig(a.cfg)
-	a.tracker.Reset()
-	a.curBoss, a.lastBossHit = "", ""
-	a.deathNoBoss, a.ocrProven = time.Time{}, false
+	a.ocrProven = false
 	a.refreshCount()
 	a.reloadTemplates()
-	a.refreshBosses()
 }
 
 func (a *App) manualAdd() {
@@ -511,17 +490,6 @@ func (a *App) startPick(what string) {
 		p.Title = "Khoanh vùng nhận diện - " + a.cur.Name
 		p.Instr = "Kéo chuột để khoanh SÁT dòng chữ hoặc biểu tượng chỉ hiện khi chết (vd: YOU DIED). Tránh lấy phần cảnh game phía sau."
 		p.Init = a.cur.ROI
-	case "boss":
-		p.Title = "Vùng tên boss - " + a.cur.Name
-		p.Instr = "Kéo chuột khoanh vùng có TÊN BOSS (thường ngay trên thanh máu boss). Để rộng một chút cho tên dài; tránh lấy phụ đề."
-		p.Init = a.cur.BossROI
-		if p.Init.W <= 0 {
-			if z := a.presetBossZone(); z != nil {
-				p.Init = *z
-			} else {
-				p.Init = DefaultBossZones[0]
-			}
-		}
 	case "hp":
 		p.Title = "Khoanh thanh máu - " + a.cur.Name
 		p.Instr = "Kéo chuột khoanh THANH MÁU nhân vật, lúc đang đầy máu."
@@ -558,11 +526,6 @@ func (a *App) endPick(roi *ROI) {
 			a.det.Reset()
 			a.reloadTemplates()
 			a.status = "Đã lưu vùng nhận diện."
-		case "boss":
-			a.cur.BossROI = r
-			a.store.SaveProfile(a.cur)
-			a.tracker.Reset()
-			a.status = "Đã lưu vùng tên boss."
 		case "hp":
 			c, ok := LearnHPColor(p.shot, r)
 			if !ok {
@@ -612,19 +575,6 @@ func (a *App) placeOverlays() {
 	h := a.cfg.OverlayFontSize*8/5 + 2*a.cfg.OutlineWidth + 24
 	C.bw_overlay_frame(a.overlay, C.int(x), C.int(y), 1200, C.int(h))
 	C.bw_overlay_show(a.overlay, boolC(a.cfg.OverlayEnabled || a.overlayEdit))
-
-	x, y, ok = ClampToMonitors(a.cfg.BossPanelX, a.cfg.BossPanelY, rects)
-	if !a.cfg.BossPanelPosSet || !ok {
-		x, y = a.defaultPanelPos()
-	}
-	fs := a.cfg.BossPanelFontSize
-	C.bw_overlay_frame(a.panel, C.int(x), C.int(y), C.int(fs*24), C.int(fs*12))
-	C.bw_overlay_show(a.panel, boolC(a.cfg.BossPanelEnabled || a.panelEdit))
-}
-
-func (a *App) defaultPanelPos() (int32, int32) {
-	r := a.monitors[0].Rect
-	return r.R - int32(a.cfg.BossPanelFontSize*24) - 40, r.T + 40
 }
 
 func boolC(b bool) C.int {
@@ -754,7 +704,6 @@ func (a *App) stateJSON() map[string]any {
 		"format": c.ObsFormat, "font": c.FontFamily, "size": c.OverlayFontSize, "bold": c.FontBold,
 		"color": c.TextColor, "outline": c.Outline, "outlineWidth": c.OutlineWidth, "outlineColor": c.OutlineColor,
 		"overlay": c.OverlayEnabled, "overlayEdit": a.overlayEdit, "obs": c.ObsEnabled,
-		"panel": c.BossPanelEnabled, "panelEdit": a.panelEdit, "panelFont": c.BossPanelFontSize,
 		"sound": c.Sound, "volume": c.SoundVolume, "soundFile": filepath.Base(c.SoundFile), "hasSoundFile": c.SoundFile != "",
 		"hotkeys": c.Hotkeys, "screenAccess": screenAccessGranted(),
 		"translate": map[string]any{"on": t.on, "hasKey": t.apiKey != "", "hasRegion": a.hasTranslateRegion(),
@@ -767,7 +716,7 @@ func (a *App) stateJSON() map[string]any {
 			}()},
 	}
 	if a.server != nil {
-		st["url"], st["bossUrl"] = a.server.URL(), a.server.BossURL()
+		st["url"] = a.server.URL()
 	}
 	if p := a.pick; p != nil {
 		st["pick"] = map[string]any{"what": p.What, "title": p.Title, "instr": p.Instr, "init": p.Init, "w": p.shot.Bounds().Dx(), "h": p.shot.Bounds().Dy()}
@@ -777,16 +726,9 @@ func (a *App) stateJSON() map[string]any {
 		for i, n := range p.Templates {
 			tmpl[i] = templateLabel(i, n)
 		}
-		bosses := SortedBosses(p)
 		roi := "Toàn màn hình"
 		if !p.ROI.IsFull() {
 			roi = roiLabel(p.ROI)
-		}
-		zone := "Tự động: trên + dưới"
-		if p.BossROI.W > 0 && p.BossROI.H > 0 {
-			zone = roiLabel(p.BossROI)
-		} else if a.presetBossZone() != nil {
-			zone = "Theo mẫu game (" + p.Preset + ")"
 		}
 		hint := "Cách nhau bằng dấu phẩy. Thêm * ở cuối để khớp phần đầu câu."
 		if i := a.presetIndex(p.Preset); i >= 0 {
@@ -796,16 +738,10 @@ func (a *App) stateJSON() map[string]any {
 		if p.HPColor.Valid() {
 			hpZone = fmt.Sprintf("%s · màu %.0f°", roiLabel(p.HPZone), p.HPColor.Hue)
 		}
-		now := "--"
-		if !p.BossTrack {
-			now = "(đang tắt)"
-		} else if a.curBoss != "" {
-			now = a.curBoss
-		}
 		st["cur"] = map[string]any{"id": p.ID, "name": p.Name, "deaths": p.Deaths, "auto": p.AutoEnabled, "ocr": p.OcrEnabled,
 			"lang": p.OcrLang, "preset": p.Preset, "presetHint": hint, "keywords": strings.Join(EffectiveKeywords(p, c.Keywords), ", "),
 			"threshold": int(p.Threshold*100 + 0.5), "cooldown": p.CooldownSec, "roi": roi, "templates": tmpl,
-			"hpOn": p.HPEnabled, "hpZone": hpZone, "boss": p.BossTrack, "bossNow": now, "bossZone": zone, "bosses": bosses}
+			"hpOn": p.HPEnabled, "hpZone": hpZone}
 	}
 	return st
 }
@@ -928,7 +864,6 @@ func (a *App) do(q doRequest) {
 			}
 			save()
 			a.refreshCount()
-			a.refreshBosses()
 			a.placeOverlays()
 		}
 		return
@@ -949,25 +884,6 @@ func (a *App) do(q doRequest) {
 		c.ObsEnabled = q.B
 		save()
 		a.refreshCount()
-		return
-	case "panel":
-		c.BossPanelEnabled = q.B
-		save()
-		a.placeOverlays()
-		return
-	case "panel-font":
-		c.BossPanelFontSize = max(10, min(int(q.N), 80))
-		save()
-		a.refreshBosses()
-		a.placeOverlays()
-		return
-	case "panel-edit":
-		a.toggleEdit(a.panel, &a.panelEdit, func(x, y int32) { c.BossPanelX, c.BossPanelY, c.BossPanelPosSet = x, y, true })
-		return
-	case "panel-reset":
-		c.BossPanelPosSet = false
-		save()
-		a.placeOverlays()
 		return
 	case "sound":
 		c.Sound = q.B
@@ -1014,13 +930,11 @@ func (a *App) do(q doRequest) {
 		a.store.SaveProfile(p)
 		a.store.AppendHistory(time.Now(), p.Name, -old, 0, "reset")
 		a.refreshCount()
-		a.refreshBosses()
 	case "profile-rename":
 		if name := strings.TrimSpace(q.S); name != "" {
 			p.Name = name
 			a.store.SaveProfile(p)
 			a.refreshCount()
-			a.refreshBosses()
 		}
 	case "profile-delete":
 		if len(a.profiles) <= 1 {
@@ -1047,7 +961,6 @@ func (a *App) do(q doRequest) {
 	case "lang":
 		p.OcrLang = q.S
 		a.store.SaveProfile(p)
-		a.tracker.Reset()
 		a.updateLoop()
 		a.status = "Đã đổi ngôn ngữ OCR cho game này."
 	case "preset":
@@ -1059,7 +972,6 @@ func (a *App) do(q doRequest) {
 		}
 		a.store.SaveProfile(p)
 		a.det.Reset()
-		a.tracker.Reset()
 		a.status = "Đã áp dụng mẫu theo game."
 	case "keywords":
 		kw := ParseKeywords(q.S)
@@ -1095,35 +1007,6 @@ func (a *App) do(q doRequest) {
 			a.status = "Bấm \"Khoanh thanh máu...\" lúc đang đầy máu để app học màu thanh máu."
 		}
 		a.updateLoop()
-	case "boss":
-		p.BossTrack = q.B
-		a.store.SaveProfile(p)
-		a.tracker.Reset()
-		a.curBoss = ""
-		a.updateLoop()
-		a.refreshBosses()
-	case "boss-zone-auto":
-		p.BossROI = ROI{}
-		a.store.SaveProfile(p)
-	case "boss-rename":
-		if strings.TrimSpace(q.S2) != "" {
-			RenameBoss(p, q.S, q.S2)
-			a.store.SaveProfile(p)
-			a.refreshBosses()
-		}
-	case "boss-merge":
-		MergeBoss(p, q.S, q.S2)
-		a.store.SaveProfile(p)
-		a.refreshBosses()
-		a.status = "Đã gộp vào \"" + q.S2 + "\"."
-	case "boss-remove":
-		RemoveBoss(p, q.S)
-		a.store.SaveProfile(p)
-		a.refreshBosses()
-	case "boss-clear":
-		p.Bosses = nil
-		a.store.SaveProfile(p)
-		a.refreshBosses()
 	}
 }
 

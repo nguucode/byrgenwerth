@@ -43,7 +43,6 @@ type EngineUI interface {
 	inGame() bool
 	playSound()
 	refreshCount()
-	refreshBosses()
 	refreshROILabel()
 	reloadTemplates()
 	trSrcText(s string)
@@ -76,14 +75,7 @@ type Engine struct {
 	ocrInitErr   string
 	recentOcr    []OcrFrame // the last ~10 s of OCR, written to the miss log on a manual +1
 
-	hpDet       *HPDeath
-	tracker     *BossTracker
-	curBoss     string
-	lastBossHit string
-	lastBossAt  time.Time
-	// deathNoBoss is when a death was counted before its boss was confirmed. In
-	// Souls games the name is often read cleanly only on the death screen.
-	deathNoBoss time.Time
+	hpDet *HPDeath
 	// ocrProven: OCR has read this game's death text this session. From then on
 	// a template match alone does not count: templates of a dark death screen
 	// also match the dark respawn or a dimmed screenshot tool.
@@ -233,28 +225,9 @@ func (a *Engine) onFrame(fr frameResult) {
 		if fr.ocrErr != nil {
 			a.ui.ocrText("Lỗi: " + fr.ocrErr.Error())
 		} else {
-			kw := EffectiveKeywords(a.cur, a.cfg.Keywords)
 			if a.cur.OcrEnabled {
-				m, hit = MatchDeath(fr.lines, kw, a.cfg.OcrMinHeight)
+				m, hit = MatchDeath(fr.lines, EffectiveKeywords(a.cur, a.cfg.Keywords), a.cfg.OcrMinHeight)
 				a.ui.ocrText(describeOcr(fr.lines, m, hit))
-			}
-			// Boss names come from the game: skip frames where another window (a
-			// browser, chat) is in front, or its text becomes the "boss".
-			if a.cur.BossTrack && a.ui.inGame() {
-				own := []string{a.cur.Name, "Deaths", FormatObs(a.cfg.ObsFormat, a.cur.Name, a.cur.Deaths)}
-				a.tracker.Observe(WithoutNames(BossCandidates(fr.lines, a.bossZones(), kw), own), now)
-				b, _ := a.tracker.Current(now)
-				if b != a.curBoss {
-					a.curBoss = b
-					a.store.AppendDebugLog("BOSS "+b, now)
-					if b != "" && !a.deathNoBoss.IsZero() && now.Sub(a.deathNoBoss) <= 15*time.Second {
-						a.lastBossHit, a.lastBossAt = AddBossDeath(a.cur, b, 1), now
-						a.deathNoBoss = time.Time{}
-						a.store.SaveProfile(a.cur)
-						a.store.AppendDebugLog("BOSS credited the death just before: "+b, now)
-					}
-					a.ui.refreshBosses()
-				}
 			}
 		}
 	}
@@ -282,7 +255,7 @@ func (a *Engine) onFrame(fr frameResult) {
 		why = fmt.Sprintf("giống mẫu #%d: %d%%", idx+1, int(sim*100))
 	}
 	msg := fmt.Sprintf("Tự đếm lúc %s (%s). Đếm sai thì bấm %s.", now.Format("15:04:05"), why, a.cfg.Hotkeys.Sub)
-	a.store.AppendDebugLog("WHY  "+why+", boss: "+a.lastBossHit, now)
+	a.store.AppendDebugLog("WHY  "+why, now)
 	if hit {
 		msg += a.learnFromOcr(fr.small, m, sim)
 	}
@@ -314,7 +287,7 @@ func (a *Engine) updateLoop() {
 	st := loopState{gen: a.gen}
 	if a.cur != nil {
 		st.hasTemplates = len(a.tmplFeats) > 0
-		st.ocr = (a.cur.OcrEnabled || a.cur.BossTrack) && a.ocrAvailable
+		st.ocr = a.cur.OcrEnabled && a.ocrAvailable
 		st.ocrLang = a.cur.OcrLang
 		st.hp = a.cur.HPEnabled && a.cur.HPColor.Valid()
 		st.hpZone, st.hpColor = a.cur.HPZone, a.cur.HPColor
@@ -367,49 +340,9 @@ func (a *Engine) addDeath(delta int, source string) {
 	if delta > 0 && a.cfg.Sound {
 		a.ui.playSound()
 	}
-	if a.cur.BossTrack && a.tracker != nil {
-		now := time.Now()
-		if delta > 0 {
-			a.lastBossHit, a.deathNoBoss = "", now
-			if b, ok := a.tracker.Current(now); ok {
-				a.lastBossHit = AddBossDeath(a.cur, b, 1)
-				a.lastBossAt = now
-				a.deathNoBoss = time.Time{}
-			}
-		} else {
-			a.deathNoBoss = time.Time{} // a −1 cancels a pending late boss credit
-			if a.lastBossHit != "" && now.Sub(a.lastBossAt) < 3*time.Minute {
-				AddBossDeath(a.cur, a.lastBossHit, -1) // undo the boss credit with the −1
-				a.lastBossHit = ""
-			}
-		}
-	}
 	a.store.SaveProfile(a.cur)
 	a.store.AppendHistory(time.Now(), a.cur.Name, delta, a.cur.Deaths, source)
 	a.ui.refreshCount()
-	a.ui.refreshBosses()
-}
-
-// bossZones: the user's region, else the game preset's, else the defaults.
-func (a *Engine) bossZones() []ROI {
-	if a.cur != nil && a.cur.BossROI.W > 0 && a.cur.BossROI.H > 0 {
-		return []ROI{a.cur.BossROI.Normalized()}
-	}
-	if z := a.presetBossZone(); z != nil {
-		return []ROI{*z}
-	}
-	return DefaultBossZones
-}
-
-func (a *Engine) presetBossZone() *ROI {
-	if a.cur == nil {
-		return nil
-	}
-	if i := a.presetIndex(a.cur.Preset); i >= 0 && a.presets[i].BossZone != nil {
-		z := a.presets[i].BossZone.Normalized()
-		return &z
-	}
-	return nil
 }
 
 func (a *Engine) presetIndex(name string) int {

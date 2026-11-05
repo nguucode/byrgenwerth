@@ -29,7 +29,7 @@ func runUninstall(a *App) {
 		owner = a.mw
 	}
 	msg := "Gỡ Byrgenwerth khỏi máy?\n\nSẽ xóa:\n" +
-		"• Toàn bộ dữ liệu: số đếm, ảnh mẫu, thống kê boss, API key, cài đặt\n" +
+		"• Toàn bộ dữ liệu: số đếm, ảnh mẫu, API key, cài đặt\n" +
 		"• File Byrgenwerth.exe và thư mục cài đặt\n" +
 		"• Shortcut trong Start Menu và mục trong Apps & features\n\n" +
 		"Không hoàn tác được."

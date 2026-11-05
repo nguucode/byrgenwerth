@@ -737,18 +737,29 @@ func TestDebugLog(t *testing.T) {
 }
 
 func TestDropLinesInside(t *testing.T) {
-	own := line("Deaths: 0", 0.9, 0.02, 0.014)    // the app's overlay, top-right
-	boss := line("Asylum Demon", 0.1, 0.8, 0.025) // the game's boss label
+	own := line("Deaths: 0", 0.9, 0.02, 0.014) // the app's overlay, top-right
+	game := line("YOU DIED", 0.1, 0.8, 0.025)  // the game's own text
 	app := []ROI{{X: 0.85, Y: 0, W: 0.15, H: 0.06}}
-	got := DropLinesInside([]OcrLine{own, boss}, app)
-	if len(got) != 1 || got[0].Text != "Asylum Demon" {
+	got := DropLinesInside([]OcrLine{own, game}, app)
+	if len(got) != 1 || got[0].Text != "YOU DIED" {
 		t.Fatalf("own text must be dropped, game text kept: %+v", got)
-	}
-	// Dark Souls puts the name at the left end of the bottom bar.
-	if c := BossCandidates([]OcrLine{boss}, DefaultBossZones, DefaultKeywords); len(c) != 1 {
-		t.Fatalf("Dark Souls boss label should be a candidate: %v", c)
 	}
 	if len(DropLinesInside([]OcrLine{own}, nil)) != 1 {
 		t.Fatal("no rects: keep everything")
+	}
+}
+
+func TestCJKKeywordAndNormalize(t *testing.T) {
+	if NormalizeText("Lời nguyền") != "LỜI NGUYỀN" {
+		t.Fatal(NormalizeText("Lời nguyền"))
+	}
+	// Chinese OCR returns characters as separate words.
+	l := OcrLine{Text: "殒 命", Words: []OcrWord{{Text: "殒", X: 0.45, Y: 0.4, W: 0.05, H: 0.08}, {Text: "命", X: 0.5, Y: 0.4, W: 0.05, H: 0.08}}}
+	if _, ok := MatchDeath([]OcrLine{l}, []string{"殒命"}, 0.025); !ok {
+		t.Fatal("CJK keyword should match across split characters")
+	}
+	long := OcrLine{Text: "这是一段很长的对话殒命之后继续", Words: []OcrWord{{Text: "这是一段很长的对话殒命之后继续", X: 0.3, Y: 0.4, W: 0.4, H: 0.05}}}
+	if _, ok := MatchDeath([]OcrLine{long}, []string{"殒命"}, 0.025); ok {
+		t.Fatal("CJK keyword inside a long sentence must not match")
 	}
 }
