@@ -26,6 +26,9 @@ curl -fsSL -H 'Accept: application/octet-stream' "$url" -o "$tmp/app.zip" || fai
 ditto -x -k "$tmp/app.zip" "$tmp"
 
 pkill -x Byrgenwerth 2>/dev/null && sleep 1 || true
+# The ad-hoc signature changes with every build, so a Screen Recording grant for
+# the old build stays switched on but no longer applies. Clear it so macOS asks again.
+[ -d "$dest/Byrgenwerth.app" ] && tccutil reset ScreenCapture com.nguucode.byrgenwerth >/dev/null 2>&1 || true
 mkdir -p "$dest"
 rm -rf "$dest/Byrgenwerth.app"
 mv "$tmp/Byrgenwerth.app" "$dest/Byrgenwerth.app"
