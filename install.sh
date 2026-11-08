@@ -1,9 +1,9 @@
 #!/bin/sh
 # Install or update Byrgenwerth on macOS 14 or newer. Run in Terminal:
-#   curl -fsSL https://raw.githubusercontent.com/nguucode/death-counter/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.sh | sh
 # Data lives in ~/Library/Application Support/Byrgenwerth and is kept on update.
 set -eu
-repo=nguucode/death-counter
+repo=nguucode/byrgenwerth
 dest="$HOME/Applications"
 
 tmp=$(mktemp -d)

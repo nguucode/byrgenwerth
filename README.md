@@ -26,7 +26,7 @@ A small app for Windows and macOS that supports you while you play. Formerly Dea
 
 1. Open PowerShell and run the command below. The first time it asks where to install; run it again to update.
    ```powershell
-   irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+   irm https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.ps1 | iex
    ```
 2. Click **+ Thêm** (Add) and type your game's name. If it is one of the 100 presets, keywords are set automatically.
 3. Play. When the death screen appears, the counter goes up.
@@ -36,7 +36,7 @@ A small app for Windows and macOS that supports you while you play. Formerly Dea
 On macOS 14 or newer, run this in Terminal instead:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nguucode/death-counter/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.sh | sh
 ```
 
 Full walkthrough: **[docs/user-guide.md](docs/user-guide.md)**.
@@ -92,7 +92,7 @@ App nhỏ gọn cho Windows và macOS, hỗ trợ bạn khi chơi game, tên cũ
 
 1. Mở PowerShell, chạy lệnh dưới. Lần đầu script hỏi thư mục cài; chạy lại để cập nhật.
    ```powershell
-   irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+   irm https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.ps1 | iex
    ```
 2. Bấm **+ Thêm**, gõ tên game. Game nằm trong 100 mẫu thì app tự nạp từ khóa.
 3. Vào chơi. Màn chết hiện ra là số tự tăng. Nếu không tăng (chữ cách điệu hoặc không có chữ), bấm **F9** một lần ngay lúc màn chết đang hiện.
@@ -101,7 +101,7 @@ App nhỏ gọn cho Windows và macOS, hỗ trợ bạn khi chơi game, tên cũ
 Trên macOS 14 trở lên, chạy lệnh này trong Terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nguucode/death-counter/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.sh | sh
 ```
 
 Hướng dẫn chi tiết: **[docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md)**.
