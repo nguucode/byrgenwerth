@@ -1,4 +1,4 @@
-//go:build windows || darwin
+//go:build windows
 
 package main
 
@@ -49,27 +49,19 @@ func (a *Engine) captureLoop() {
 			newLangs = ocr.Langs
 		}
 
-		fr := frameResult{gen: st.gen, langs: newLangs, hpRaw: -1}
+		fr := frameResult{gen: st.gen, langs: newLangs}
 		var err error
-		if (st.ocr && ocr != nil) || st.hp {
+		if st.ocr && ocr != nil {
 			ow, oh := OcrSize(st.mon)
 			var big *image.RGBA
 			big, err = CaptureMonitorScaled(st.mon, ow, oh)
 			if err == nil {
 				fr.small = Downscale(big, CaptureW, CaptureH)
-				if st.ocr && ocr != nil {
-					fr.lines, fr.ocrErr = ocr.Recognize(big)
-					fr.ranOcr = true
-				}
-				if st.hp {
-					fr.hpRaw = MeasureHP(big, st.hpZone, st.hpColor)
-				}
+				fr.lines, fr.ocrErr = ocr.Recognize(big)
+				fr.ranOcr = true
 			}
 		} else {
 			fr.small, err = CaptureMonitor(st.mon)
-		}
-		if err == nil {
-			fr.black = IsBlack(fr.small)
 		}
 		if err != nil {
 			if err.Error() != lastErr {

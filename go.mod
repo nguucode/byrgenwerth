@@ -8,6 +8,9 @@ require (
 	github.com/anthropics/anthropic-sdk-go v1.84.0
 	github.com/lxn/walk v0.0.0-20210112085537-c389da54e794
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e
+	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c
+	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef
+	golang.org/x/image v0.0.0-20211028202545-6944b10bf410
 	golang.org/x/sys v0.35.0
 )
 
@@ -28,7 +31,9 @@ require (
 	go.opentelemetry.io/otel/metric v1.33.0 // indirect
 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
+	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 	gopkg.in/Knetic/govaluate.v3 v3.0.0-00010101000000-000000000000 // indirect
 )
 

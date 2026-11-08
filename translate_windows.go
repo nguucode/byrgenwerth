@@ -15,31 +15,28 @@ import (
 	"github.com/lxn/win"
 )
 
+// translatePage has two tabs: the translation itself and its narration.
 func (a *App) translatePage() Widget {
 	hk := a.cfg.Hotkeys
-	return Composite{
-		AssignTo: &a.transPage,
-		Visible:  false,
-		Border:   true,
-		Layout:   VBox{Margins: Margins{Left: 10, Top: 10, Right: 10, Bottom: 10}, Spacing: 6},
+	translateTab := TabPage{
+		Title:  "Dịch",
+		Layout: pageLayout(),
 		Children: []Widget{
-			title("Dịch hội thoại (Anh → Việt)"),
-			CheckBox{AssignTo: &a.trOnCB, Text: "Bật dịch", OnCheckedChanged: a.onTranslateToggled},
+			row(CheckBox{AssignTo: &a.trOnCB, Text: "Bật dịch Anh → Việt", OnCheckedChanged: a.onTranslateToggled,
+				ToolTipText: hk.TranslateToggle + " bật/tắt dịch"}),
 			form(
-				Label{Text: "Vùng hội thoại"}, row(
-					Label{AssignTo: &a.trRegionLbl, Text: "Chưa khoanh", StretchFactor: 3},
-					PushButton{Text: "Khoanh vùng...", OnClicked: a.editTranslateRegion},
+				Label{Text: "Vùng"}, row(
+					Label{AssignTo: &a.trRegionLbl, Text: "Chưa khoanh"},
+					PushButton{Text: "Khoanh...", OnClicked: a.editTranslateRegion, ToolTipText: hk.TranslateRegion + " khoanh lại vùng hội thoại"},
 				),
-				Label{Text: "API key"}, LineEdit{AssignTo: &a.trKeyLE, PasswordMode: true, OnEditingFinished: a.onAPIKeyChanged},
+				Label{Text: "API key"}, LineEdit{AssignTo: &a.trKeyLE, PasswordMode: true, MinSize: inSize, MaxSize: inSize, OnEditingFinished: a.onAPIKeyChanged,
+					ToolTipText: "API key Anthropic của bạn (console.anthropic.com), trả phí theo lượng dùng. Key được mã hóa theo tài khoản Windows."},
 				Label{Text: "Cỡ phụ đề"}, row(
-					NumberEdit{AssignTo: &a.trFontNE, MinValue: 10, MaxValue: 120, Decimals: 0, Value: float64(a.cfg.TranslateFontSize), SpinButtonsVisible: true, MaxSize: Size{Width: 80}, OnValueChanged: a.onSubtitleFontChanged},
+					NumberEdit{AssignTo: &a.trFontNE, MinValue: 10, MaxValue: 120, Decimals: 0, Value: float64(a.cfg.TranslateFontSize), SpinButtonsVisible: true, MinSize: inSize, MaxSize: inSize, OnValueChanged: a.onSubtitleFontChanged},
 					Label{Text: "px"},
-					HSpacer{},
 				),
 			),
-			hint("Dùng API key Anthropic của bạn (console.anthropic.com), trả phí theo lượng dùng. Chữ trong vùng khoanh được gửi tới Anthropic để dịch. Key được mã hóa theo tài khoản Windows, không rời khỏi máy trừ khi gọi dịch."),
-			hint("Game cần chạy Windowed hoặc Borderless để phụ đề hiện được phía trên. Tên game lấy từ tab Death count, giúp dịch đúng tên riêng."),
-			hint(fmt.Sprintf("Phím tắt:  %s bật/tắt dịch  ·  %s khoanh lại vùng", hk.TranslateToggle, hk.TranslateRegion)),
+			hint("Chỉ chữ trong vùng khoanh, vài câu trước và tên game được gửi tới Anthropic để dịch. Game cần chạy Windowed hoặc Borderless."),
 			sep(),
 			title("Câu vừa đọc"),
 			TextLabel{AssignTo: &a.trSrcLbl, Text: "--", MinSize: Size{Width: 100}},
@@ -48,6 +45,17 @@ func (a *App) translatePage() Widget {
 			Label{AssignTo: &a.trCostLbl, Text: "", TextColor: hintColor},
 			VSpacer{},
 		},
+	}
+	narrateTab := TabPage{
+		Title:    "Thuyết minh",
+		Layout:   pageLayout(),
+		Children: append(a.narrationSection(), VSpacer{}),
+	}
+	return Composite{
+		AssignTo: &a.transPage,
+		Visible:  false,
+		Layout:   VBox{MarginsZero: true, Alignment: AlignHNearVNear},
+		Children: []Widget{TabWidget{Pages: []TabPage{translateTab, narrateTab}}},
 	}
 }
 
@@ -318,7 +326,6 @@ func (o *Overlay) renderSubtitle() {
 
 func (a *App) sync(f func())       { a.mw.Synchronize(f) }
 func (a *App) simText(s string)    { a.simLbl.SetText(s) }
-func (a *App) hpText(s string)     { a.hpLbl.SetText(s) }
 func (a *App) ocrText(s string)    { a.ocrLbl.SetText(s) }
 func (a *App) inGame() bool        { return isOtherFullscreen(win.GetForegroundWindow()) }
 func (a *App) trSrcText(s string)  { a.trSrcLbl.SetText(s) }

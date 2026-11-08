@@ -16,22 +16,6 @@ jobs:
           go-version: "1.24"
       - run: go test ./...
 
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-      - run: go vet ./...
-      - run: go test ./...  # includes Vision OCR on a real image
-      - run: sh -n install.sh
-      - run: scripts/build-mac.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Byrgenwerth-macos
-          path: dist/Byrgenwerth-macos.zip
-
   windows:
     runs-on: windows-latest
     steps:

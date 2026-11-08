@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -196,9 +195,9 @@ type Monitor struct {
 func (m Monitor) Px() PxRect { return m.Rect }
 
 func (m Monitor) Label(i int) string {
-	s := fmt.Sprintf("Màn hình %d (%dx%d)", i+1, m.Rect.R-m.Rect.L, m.Rect.B-m.Rect.T)
+	s := fmt.Sprintf("%d: %dx%d", i+1, m.Rect.R-m.Rect.L, m.Rect.B-m.Rect.T)
 	if m.Primary {
-		s += " - chính"
+		s += " (chính)"
 	}
 	return s
 }
@@ -244,32 +243,4 @@ func PlaceSubtitle(region, mon PxRect, w, h int32) (x, y int32) {
 	x = max(mon.L, min(x, mon.R-w))
 	y = max(mon.T, min(y, mon.B-h))
 	return x, y
-}
-
-// parseVisionOCR reads the JSON the macOS OCR layer returns.
-func parseVisionOCR(raw string) ([]OcrLine, error) {
-	var out struct {
-		Error string `json:"error"`
-		Lines []struct {
-			Text  string `json:"text"`
-			Words []struct {
-				T          string
-				X, Y, W, H float64
-			} `json:"words"`
-		} `json:"lines"`
-	}
-	if err := json.Unmarshal([]byte(raw), &out); err != nil {
-		return nil, err
-	}
-	if out.Error != "" {
-		return nil, errors.New(out.Error)
-	}
-	lines := make([]OcrLine, len(out.Lines))
-	for i, l := range out.Lines {
-		lines[i].Text = l.Text
-		for _, w := range l.Words {
-			lines[i].Words = append(lines[i].Words, OcrWord{Text: w.T, X: w.X, Y: w.Y, W: w.W, H: w.H})
-		}
-	}
-	return lines, nil
 }

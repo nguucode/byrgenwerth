@@ -6,14 +6,15 @@
 
 1. [Cài đặt](#1-cài-đặt)
 2. [Màn hình chính](#2-màn-hình-chính)
-3. [Thêm game](#3-thêm-game)
-4. [Tab Nhận diện: tự đếm số lần chết](#4-tab-nhận-diện-tự-đếm-số-lần-chết)
-5. [Tab Hiển thị: overlay và OBS](#5-tab-hiển-thị-overlay-và-obs)
-6. [Tab Cài đặt: âm thanh và dữ liệu](#6-tab-cài-đặt-âm-thanh-và-dữ-liệu)
+3. [Tab Nhận diện: tự đếm số lần chết](#3-tab-nhận-diện-tự-đếm-số-lần-chết)
+4. [Tab Hiển thị: nhãn và kiểu chữ](#4-tab-hiển-thị-nhãn-và-kiểu-chữ)
+5. [Tab Overlay/OBS](#5-tab-overlayobs)
+6. [Tab Cài đặt](#6-tab-cài-đặt)
 7. [Phím tắt](#7-phím-tắt)
 8. [Dữ liệu được lưu ở đâu](#8-dữ-liệu-được-lưu-ở-đâu)
 9. [Xử lý sự cố](#9-xử-lý-sự-cố)
-10. [Tab Translate: dịch hội thoại theo thời gian thực](#10-tab-translate-dịch-hội-thoại-theo-thời-gian-thực)
+10. [Translate: dịch hội thoại theo thời gian thực](#10-translate-dịch-hội-thoại-theo-thời-gian-thực)
+11. [Thuyết minh tiếng Việt](#11-thuyết-minh-tiếng-việt)
 
 ---
 
@@ -27,239 +28,214 @@ irm https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.ps1 | ie
 
 - **Lần đầu** script hỏi thư mục cài; bấm Enter để dùng `%LOCALAPPDATA%\Programs\Byrgenwerth`. Thư mục bạn gõ không tên là `Byrgenwerth` thì script tạo thư mục `Byrgenwerth` bên trong. App và toàn bộ dữ liệu nằm trong thư mục này.
 - Script thêm **Byrgenwerth** vào Start menu và vào *Apps & features* của Windows, rồi mở app.
-- **Cập nhật**: chạy lại đúng lệnh đó. Script đóng app, thay file exe trong cùng thư mục, giữ nguyên dữ liệu. Bản Death Counter đang cài sẽ được đổi tên thành Byrgenwerth, giữ nguyên số đếm và cài đặt. Nếu dùng file text trong OBS thì cập nhật lại đường dẫn.
-- Lần đầu mở app, Windows có thể **hỏi quyền mạng**: app mở một trang web nội bộ ở `127.0.0.1` để OBS đọc. Trang này chỉ chạy trong máy. Chọn cho phép. Chỉ tab Translate mới ra internet, và chỉ khi đang bật.
+- **Cập nhật**: chạy lại đúng lệnh đó. Script đóng app, thay file exe trong cùng thư mục, giữ nguyên dữ liệu.
+- Lần đầu mở app, Windows có thể **hỏi quyền mạng**: app mở một trang web nội bộ ở `127.0.0.1` để OBS đọc. Trang này chỉ chạy trong máy. Chọn cho phép.
 
 Cài tay: tải `Byrgenwerth.exe` ở trang [Releases](https://github.com/nguucode/byrgenwerth/releases/latest) vào thư mục bạn có quyền ghi (không phải `C:\Program Files`). SmartScreen có thể cảnh báo vì exe chưa ký số: *More info → Run anyway*. Khi đó cập nhật cũng phải làm tay.
 
 Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclusive Fullscreen, Windows không cho app chụp màn hình game và overlay bị che.
 
-### macOS
-
-macOS 14 trở lên, Apple Silicon hoặc Intel. Có đủ hai công cụ như bản Windows. Chạy lệnh này trong Terminal:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.sh | sh
-```
-
-App được cài vào `~/Applications`, dữ liệu nằm ở `~/Library/Application Support/Byrgenwerth`. Chạy lại lệnh để cập nhật. App không có icon ở Dock: dùng mục **Byrgenwerth** trên thanh menu để mở cửa sổ hoặc thoát.
-
-- Cho phép **Screen Recording** khi macOS hỏi, rồi mở lại app. Từ v0.11.2, cập nhật app không mất quyền nữa. Cập nhật từ bản cũ hơn thì macOS hỏi thêm một lần: các bản đó có chữ ký đổi theo mỗi lần cập nhật, và script cài sẽ xóa quyền cũ không còn tác dụng. Nếu Settings đã bật Byrgenwerth mà app vẫn báo chưa có quyền, chạy `tccutil reset ScreenCapture com.nguucode.byrgenwerth` trong Terminal, mở app, cho phép, rồi mở lại app.
-- API key được lưu trong Keychain.
-- Phím F cần giữ **fn** trên đa số bàn phím Mac, trừ khi đã bật *Use F1, F2 as standard function keys*. F11 cũng là phím Show Desktop mặc định, nên dùng nút **Chụp mẫu ngay** sẽ dễ hơn. Muốn đổi phím tắt thì sửa mục `hotkeys` trong `config.json`.
-- Bản Mac chưa được thử với game thật. Đa số game Windows chạy trên Mac qua lớp dịch, nên khả năng đọc chữ có thể khác.
+Byrgenwerth chỉ chạy trên Windows 10 và 11. Bản macOS đã bỏ từ v0.12.0.
 
 ## 2. Màn hình chính
 
-Đầu cửa sổ là tên app và phiên bản. Hai nút **Death count** và **Translate** chuyển giữa hai công cụ. Các mục dưới đây thuộc Death count; Translate xem [mục 11](#11-tab-translate-dịch-hội-thoại-theo-thời-gian-thực).
+- **Death count** / **Translate** chuyển giữa hai công cụ. **Luôn trên** giữ cửa sổ app luôn nằm trên. Khi game toàn màn hình (kể cả Borderless) hiện lên phía trước, app tự thu nhỏ; bấm F7 để mở lại.
+- **Game**: game bạn đang chơi. Mỗi game có số đếm, ảnh mẫu và từ khóa riêng. **Thêm game** để thêm. Đổi tên và xóa game nằm ở tab Cài đặt.
+- Số màu đỏ là số lần chết, kèm nút **+1**, **−1** và **Reset**.
+- **4 tab**: Nhận diện, Hiển thị, Overlay/OBS, Cài đặt.
+- Dòng cuối là **trạng thái**: app vừa làm gì, hoặc báo lỗi.
 
-- **Game**: chọn game đang chơi; mỗi game có số đếm, ảnh mẫu và từ khóa riêng.
-- **Số lần chết**: số lớn màu đỏ. Các nút **+1**, **−1** và **Reset** để chỉnh tay.
-- **3 tab**: Nhận diện, Hiển thị, Cài đặt.
-- **Cửa sổ app luôn nằm trên**: giữ cửa sổ app nổi trên các cửa sổ khác. Khi một game toàn màn hình (kể cả Borderless) được mở lên trước, cửa sổ app tự thu nhỏ; bấm F7 để gọi lại.
-- Dòng cuối là **trạng thái**: app vừa làm gì, lỗi gì nếu có.
+Rê chuột lên ô hoặc nút để xem giải thích ngắn.
 
-## 3. Thêm game
+## 3. Tab Nhận diện: tự đếm số lần chết
 
-1. Bấm **+ Thêm**, gõ tên game, OK.
-2. Nếu tên trùng một trong 100 game có sẵn mẫu (gõ gần đúng là được, ví dụ "elden ring", "wuchang"), app tự nạp từ khóa màn chết của game đó.
-3. **Đổi tên** / **Xóa** để quản lý. Xóa game sẽ xóa luôn số đếm và ảnh mẫu của game đó.
+### App nhận ra lúc chết bằng cách nào
 
-### Game được hỗ trợ
+App chụp màn hình khoảng 2 lần mỗi giây và dùng hai cách cùng lúc:
 
-Game nào chạy trên Windows cũng đếm được: OCR không bắt được màn chết thì bấm **F9** một lần để dạy ảnh mẫu, hoặc dùng [chế độ thanh máu](#game-không-có-màn-chết-màn-hình-tối-rồi-về-điểm-lưu). Khác nhau giữa các game là app tự làm được bao nhiêu. "Đã xác minh" dưới đây nghĩa là đã tìm được chữ màn chết qua wiki và ảnh chụp ([nguồn](death-screens-top100.csv)); chưa phải game nào cũng đã được chạy thử trong app.
+1. **OCR**: đọc chữ trên màn hình bằng tính năng nhận dạng chữ có sẵn của Windows, tìm từ khóa như "YOU DIED", "WASTED", "DEAD". Chữ phải **to** và **gần giữa màn hình**; chữ nhỏ trong menu, tên vật phẩm, HUD ở góc đều bị bỏ qua. Cách này dùng chung cho mọi game, không còn danh sách mẫu riêng cho từng game.
+2. **Ảnh mẫu**: so màn hình với ảnh màn chết đã lưu. Dùng cho chữ cách điệu hoặc game không có chữ. Khi OCR đã đọc được chữ chết trong phiên chơi, ảnh mẫu khớp một mình không còn được tính: ảnh mẫu màn chết tối cũng khớp lúc hồi sinh trong cảnh tối hay khi công cụ chụp màn hình làm tối màn hình.
 
-**Tự đếm, chữ dễ đọc (27):** Elden Ring, Elden Ring Nightreign, Dark Souls III, Dark Souls Remastered, Bloodborne, Demon's Souls (2020), Wuchang: Fallen Feathers, Stellar Blade, The First Berserker: Khazan, Diablo IV, The Witcher 3: Wild Hunt, Fortnite, Apex Legends, PUBG: Battlegrounds, Overwatch 2, Escape from Tarkov, Team Fortress 2, Rust, DayZ, Left 4 Dead 2, Resident Evil 4 (2023 remake), Assassin's Creed Shadows, Metal Gear Solid Delta: Snake Eater, Minecraft, Subnautica, Lethal Company, Risk of Rain 2.
-Vài game chỉ đếm được một phần: Apex Legends và Risk of Rain 2 chỉ đếm khi cả đội hoặc cả run thua; PUBG và Escape from Tarkov đếm ở màn tổng kết, không phải ngay lúc chết; Assassin's Creed Shadows đếm cả khi hỏng nhiệm vụ (DESYNCHRONIZED).
+Mỗi màn chết chỉ tính **một lần**, dù hiện bao lâu.
 
-**Tự đếm nhưng chữ cách điệu: OCR có thể trượt, bấm F9 một lần (10):** Sekiro: Shadows Die Twice (cần OCR tiếng Nhật), Hunt: Showdown 1896, Grand Theft Auto V, Red Dead Redemption 2, Resident Evil 2 (2019 remake), Hades, Terraria, Cuphead, Balatro, Fall Guys. Balatro và Fall Guys đếm lần thua run hoặc bị loại, không phải chết.
-
-**Có mẫu nhưng chưa xác minh chữ chết, dùng từ khóa chung (54):** Lies of P, Black Myth: Wukong, Lords of the Fallen (2023), Nioh 2, Mortal Shell, Hollow Knight: Silksong, Monster Hunter Wilds, Monster Hunter: World, Dragon's Dogma 2, Baldur's Gate 3, Path of Exile 2, Cyberpunk 2077, Counter-Strike 2, Valorant, Call of Duty: Warzone, Call of Duty: Black Ops 6, Call of Duty: Black Ops 7, Battlefield 6, Marvel Rivals, Tom Clancy's Rainbow Six Siege, ARC Raiders, Helldivers 2, The Finals, Destiny 2, Deadlock, Delta Force, Deep Rock Galactic, Resident Evil Village, Silent Hill 2 (2024 remake), Dead Space (2023 remake), The Last of Us Part II, God of War Ragnarök, Ghost of Tsushima, Ghost of Yōtei, Marvel's Spider-Man 2, Horizon Forbidden West, Assassin's Creed Valhalla, Kingdom Come: Deliverance II, Death Stranding 2: On the Beach, Ninja Gaiden 2 Black, Devil May Cry 5, Hades II, Dead Cells, The Binding of Isaac: Rebirth, Valheim, 7 Days to Die, Project Zomboid, Palworld, Enshrouded, R.E.P.O., PEAK, Vampire Survivors, Slay the Spire, League of Legends.
-Nhóm này có thể tự đếm nếu màn chết trùng từ khóa chung; thường sẽ cần bấm F9 một lần.
-
-**Không có chữ chết hoặc chữ quá nhỏ: dùng F9 + ảnh mẫu hoặc chế độ thanh máu (9):** Hollow Knight, The Last of Us Part I, Phasmophobia, Celeste, Super Meat Boy, Geometry Dash (không có chữ chết); Don't Starve Together, Dead by Daylight, Dota 2 (chữ quá nhỏ).
-
-Với mọi game: chỉ chạy trên Windows, game phải để **Borderless** hoặc **Windowed**. Game console (ví dụ Bloodborne, Demon's Souls) chỉ đếm được khi hình hiện trong một cửa sổ trên PC, như PS Remote Play hoặc cửa sổ xem trước của capture card.
-
-## 4. Tab Nhận diện: tự đếm số lần chết
-
-### Cách app nhận ra bạn vừa chết
-
-App chụp màn hình khoảng 2 lần mỗi giây và dùng hai cách song song:
-
-1. **OCR (đọc chữ)**: tìm từ khóa như "YOU DIED", "WASTED", "DEAD"... Chữ phải **to** và **nằm gần giữa màn hình**; chữ nhỏ trong menu, tên item hay chữ ở góc đều bị bỏ qua.
-2. **Ảnh mẫu**: so màn hình với ảnh màn chết đã lưu. Dùng cho game có chữ cách điệu hoặc không có chữ. Khi OCR đã đọc được chữ chết trong phiên chơi này, chỉ khớp ảnh mẫu thôi thì không đếm nữa: ảnh mẫu màn chết tối cũng khớp cảnh hồi sinh tối hay màn hình bị công cụ chụp làm tối.
-
-Mỗi màn chết chỉ được đếm **một lần**, dù nó hiện bao lâu.
-
-### Các mục trong tab
+### Các mục cài đặt
 
 | Mục | Ý nghĩa |
 |---|---|
-| Bật tự nhận diện | Tắt nếu chỉ muốn đếm bằng tay (F9/F10). |
-| Đọc chữ bằng OCR | Bật/tắt phần đọc chữ. |
-| Trạng thái OCR | App đang đọc thấy gì. Ví dụ `Thấy "DEAD" (cao 4.6%) → KHỚP`. Không tự đếm thì nhìn dòng này trước. |
-| Ngôn ngữ game | Ngôn ngữ OCR. Để "Theo Windows" nếu game tiếng Anh. Game tiếng khác: xem [mục 9](#ocr-không-đọc-được-game-tiếng-trungnhậtviệt). |
-| Mẫu theo game | Chọn game để nạp đúng từ khóa. "Chung (mọi game)" dùng danh sách chung. Dòng chữ xám bên dưới cho biết game đó đã được xác minh chưa. |
-| Từ khóa | Sửa tay được, cách nhau bằng dấu phẩy. Thêm `*` ở cuối để khớp phần đầu câu, ví dụ `You were slain by *`. |
-| Độ giống | Mức giống giữa màn hình và ảnh mẫu, theo thời gian thực. |
-| Ngưỡng | Giống từ mức này trở lên là tính chết. Đếm sót thì hạ (70%), đếm nhầm thì tăng (90%). |
-| Cooldown | Sau mỗi lần đếm, không đếm thêm trong số giây này. Game hồi sinh nhanh thì để 8–10 giây. |
-| Màn hình game | Chọn màn hình đang chạy game nếu có nhiều màn hình. |
-| Vùng nhận diện | Vùng dùng để so ảnh mẫu. **Khoanh sát chữ chết** cho chính xác nhất. Lần đầu OCR bắt được, app tự khoanh. |
-| Ảnh mẫu | Danh sách ảnh màn chết đã lưu (tối đa 10). Xóa ảnh chụp sai để tránh đếm nhầm. |
+| Tự nhận diện | Bật tự đếm. Tắt nếu muốn đếm tay (F9/F10). |
+| Đọc chữ (OCR) | Bật OCR. |
+| Màn hình | Màn hình đang chạy game. |
+| Ngôn ngữ | Ngôn ngữ OCR. "Theo Windows" là đủ cho game tiếng Anh. Ngôn ngữ khác xem [xử lý sự cố](#ocr-không-đọc-được-game-tiếng-trungnhậtviệt). |
+| Từ khóa | Từ khóa, cách nhau bằng dấu phẩy. Thêm `*` ở cuối để khớp phần đầu câu, ví dụ `You were slain by *`. Xóa hết để quay về bộ từ khóa chung. |
+| Ngưỡng | Ngưỡng so ảnh mẫu, mặc định **70%**. Hạ xuống nếu hay sót, tăng lên (85–90%) nếu đếm nhầm. |
+| Cooldown | Số giây chờ sau mỗi lần đếm, mặc định **10 giây**. |
+| Vùng | Vùng dùng để so ảnh mẫu. **Khoanh sát dòng chữ chết** (nút Khoanh...) để chính xác nhất. Lần đầu OCR bắt được, app tự khoanh. |
+| Ảnh mẫu | Ảnh mẫu đã lưu (tối đa 10). **Chụp mẫu** lưu màn hình hiện tại, **Xóa mẫu** xóa mẫu đang chọn. Xóa mẫu chụp sai để tránh đếm nhầm. |
+| OCR | Chữ OCR đang đọc được, ví dụ `Thấy "DEAD" (cao 4.6%) → KHỚP`. Xem dòng này đầu tiên khi bị sót. |
+| Độ giống | Độ giống giữa màn hình và ảnh mẫu, cập nhật liên tục. |
 
-### Game không có màn chết (màn hình tối rồi về điểm lưu)
+### Game không tự đếm được
 
-Một số game khi chết chỉ tối màn hình rồi tải lại, không có chữ nào. Dùng mục **Máu nhân vật**:
+1. Xem dòng **OCR** lúc màn chết đang hiện.
+2. Nếu OCR không đọc được (chữ cách điệu, chữ Hán, không có chữ): bấm **F9** ngay lúc màn chết. App cộng 1 và lưu ảnh mẫu.
+3. Bấm **Khoanh...** cạnh **Vùng**, khoanh sát dòng chữ hoặc biểu tượng chết.
+4. Từ lần chết sau app tự đếm.
 
-1. Vào game, lúc nhân vật **đang đầy máu**, bấm **Khoanh thanh máu...**. App tự ẩn đi nửa giây để chụp màn hình game.
-2. Khoanh vùng thanh máu:
-   - Thanh máu trên HUD: khoanh sát thanh máu.
-   - Máu nằm trên người nhân vật (ví dụ cột sống của Isaac trong Dead Space): khoanh **rộng** quanh chỗ nhân vật hay đứng.
-3. App tự học màu thanh máu. Dòng **Máu hiện tại** hiện % máu khi chơi.
+Game chỉ tối màn hình mà không có màn chết thì app không tự đếm được: bấm F9 mỗi lần chết.
 
-App đếm 1 lần chết khi **máu về ~0%, rồi trong vòng 8 giây màn hình đen gần như hoàn toàn ít nhất 1 giây**. Màn tải lúc còn máu không bị tính.
+## 4. Tab Hiển thị: nhãn và kiểu chữ
 
-Giới hạn: chết tức thì mà thanh máu không kịp tụt (rơi vực) có thể bị sót, khi đó bấm F9. Lúc máu rất thấp mà đi vào vùng tải màn đen thì có thể bị đếm nhầm, bấm F10 để trừ.
+### Nhãn
 
-### Game không tự đếm thì làm gì
+Nhãn hiện cùng con số, cả trên overlay lẫn trong OBS.
 
-1. Nhìn **Trạng thái OCR** khi màn chết đang hiện.
-2. Nếu OCR không đọc được (chữ cách điệu, chữ Hán, không có chữ): bấm **F9** đúng lúc màn chết hiện. App cộng 1 và lưu ảnh mẫu.
-3. Bấm **Khoanh vùng...** và khoanh sát phần chữ/biểu tượng chết.
-4. Từ lần chết sau, app tự đếm.
+| Mục | Ý nghĩa |
+|---|---|
+| Kiểu | **Chữ**, **Hình** (file PNG hoặc SVG) hoặc **Không có nhãn** (chỉ có số). |
+| Chữ | Chữ của nhãn, ví dụ `Deaths`. `{game}` được thay bằng tên game. |
+| Hình | **Chọn...** để chọn file `.png` hoặc `.svg`. File được chép vào thư mục dữ liệu, nên có thể xóa hay di chuyển file gốc. |
+| Cỡ | Cỡ nhãn (px): cỡ chữ, hoặc chiều cao của hình. |
+| Vị trí | Nhãn nằm ở góc nào quanh con số: trên trái, trên phải, dưới trái, dưới phải. "Trên" là phía trên con số, "dưới" là phía dưới; "trái"/"phải" là canh theo mép đó của con số. |
 
-## 5. Tab Hiển thị: overlay và OBS
+### Kiểu chữ
 
-### Nội dung
+Font (font có trong máy, hoặc gõ tên), cỡ của con số, đậm, độ dày viền (bật/tắt), và hai màu: **Chữ** và **Viền**. Rê chuột lên nút màu để xem mã màu.
 
-**Định dạng** quyết định chữ hiển thị. `{count}` là số lần chết, `{game}` là tên game. Ví dụ `{game} · Deaths: {count}`.
-
-### Kiểu chữ (dùng chung cho overlay và OBS)
-
-Font (chọn từ font đã cài hoặc gõ tên), cỡ chữ, đậm, màu chữ, viền (bật/tắt, độ dày) và màu viền.
+## 5. Tab Overlay/OBS
 
 ### Overlay trên màn hình
 
-1. Tick **Hiện overlay nổi trên game**.
-2. Bấm **Chỉnh vị trí overlay**: overlay hiện khung viền vàng, kéo tới chỗ muốn đặt.
-3. Bấm **Xong, lưu vị trí**. Lúc bình thường, chuột bấm xuyên qua overlay nên không vướng khi chơi.
+1. Tích **Hiện**.
+2. Bấm **Kéo vị trí**: hiện khung viền vàng, kéo đi đâu cũng được.
+3. Bấm **Lưu vị trí**. Bình thường chuột bấm xuyên qua overlay. **Đặt lại** đưa overlay về góc trên bên trái.
 
-OBS chỉ quay được overlay này khi dùng **Display Capture**. Dùng Game Capture thì xem phần dưới.
+OBS chỉ quay được overlay này khi dùng **Display Capture**. Dùng Game Capture thì dùng Browser Source bên dưới.
 
-### OBS (khuyên dùng Browser Source)
+### OBS (nên dùng Browser Source)
 
-1. Bấm **Copy** cạnh ô Browser Source (dạng `http://127.0.0.1:17321/`).
-2. Trong OBS: *Sources → + → Browser*, dán vào ô **URL**, đặt **Width 1200**, **Height 250**.
-3. Kéo nguồn tới vị trí muốn đặt. Nền trong suốt, giữ đúng kiểu chữ, số tự cập nhật.
+1. Bấm **Copy** cạnh **Browser** (`http://127.0.0.1:17321/`).
+2. Trong OBS: *Sources → + → Browser*, dán vào ô **URL**, **Width 1200**, **Height 400**.
+3. Đặt vị trí. Nền trong suốt, đúng kiểu chữ và nhãn, tự cập nhật.
 
-Cách cũ: tick **Ghi thêm file text**, rồi trong OBS dùng *Text (GDI+) → Read from file* với đường dẫn file. Cách này không giữ kiểu chữ.
+Cách cũ: tích **Ghi file** rồi dùng OBS *Text (GDI+) → Read from file* với đường dẫn lấy từ nút **Copy** bên cạnh. File chỉ có chữ nhãn và con số, không có kiểu chữ hay hình.
 
-## 6. Tab Cài đặt: âm thanh và dữ liệu
+## 6. Tab Cài đặt
 
-### Âm thanh
+### Âm thanh mỗi lần +1
 
-App **không kèm sẵn âm thanh**.
+App không kèm sẵn âm thanh. **Chọn...** để chọn file `.mp3` hoặc `.wav` của bạn, **Âm lượng** chỉnh âm lượng (chỉ với mp3), **Bật** để bật, **Nghe thử** để nghe, **Bỏ file** để bỏ. Âm thanh phát mỗi lần +1 (tự đếm, F9 hay bấm nút), không phát khi −1.
 
-1. Bấm **Chọn file...**, chọn file `.mp3` hoặc `.wav` của bạn.
-2. Tick **Phát âm thanh mỗi lần đếm +1**.
-3. Chỉnh **Âm lượng** (chỉ có tác dụng với mp3), bấm **Nghe thử**.
+### Game đang chọn
 
-Âm thanh phát mỗi lần +1 (tự đếm, F9 hay nút bấm), không phát khi −1. **Bỏ âm thanh** để tắt hẳn.
+**Đổi tên** đổi tên game đang chọn. **Xóa game** xóa game cùng số đếm và ảnh mẫu.
 
-### Dữ liệu
+### Phím tắt và dữ liệu
 
-Dữ liệu nằm trong thư mục `ByrgenwerthData` cạnh file `Byrgenwerth.exe`, nên thư mục app chứa tất cả. Nút **Mở** mở thư mục đó trong Explorer.
-
-- Lên từ Death Counter: thư mục `DeathCounterData` được đổi tên ở lần mở đầu tiên. Lên từ bản 0.8 trở về trước (dữ liệu ở `%APPDATA%\DeathCounter` hoặc thư mục bạn tự chọn): lần mở đầu tiên app tự chép sang một lần. Bản cũ giữ nguyên cho tới khi gỡ app.
-- Thư mục app không ghi được thì dữ liệu tạm lưu ở `%APPDATA%\Byrgenwerth` và app báo cho bạn. Hãy cài lại vào thư mục bạn có quyền ghi.
+Danh sách phím tắt hiện ở đây (xem [mục 7](#7-phím-tắt)). **Thư mục** mở thư mục dữ liệu.
 
 ### Gỡ cài đặt
 
-Bấm **Gỡ Byrgenwerth...** trong tab này, hoặc vào *Settings → Apps → Byrgenwerth → Uninstall* của Windows. Sau khi bạn xác nhận, app xóa:
+Bấm **Gỡ app...**, hoặc vào Windows *Settings → Apps → Byrgenwerth → Uninstall*. Sau khi xác nhận, app xóa:
 
-- toàn bộ dữ liệu, gồm cả API key: `ByrgenwerthData`, `%APPDATA%\Byrgenwerth`, cùng `%APPDATA%\DeathCounter` và thư mục bạn chọn ở bản cũ (chỉ xóa file của app trong đó, không đụng file khác),
-- file `Byrgenwerth.exe`, và thư mục cài nếu không còn gì,
+- toàn bộ dữ liệu, gồm API key, hình nhãn và giọng đọc đã tải: `ByrgenwerthData`, `%APPDATA%\Byrgenwerth`, cùng `%APPDATA%\DeathCounter` và thư mục bạn chọn ở bản cũ (chỉ các file của app trong đó, không đụng file khác),
+- `Byrgenwerth.exe`, và thư mục cài nếu không còn gì bên trong,
 - shortcut trong Start menu và mục trong *Apps & features*.
 
-Không hoàn tác được. Muốn giữ số đếm thì copy `ByrgenwerthData` ra chỗ khác trước.
+Không hoàn tác được. Muốn giữ số đếm thì chép thư mục `ByrgenwerthData` ra chỗ khác trước.
 
 ## 7. Phím tắt
 
 | Phím | Tác dụng |
 |---|---|
-| F9 | +1. Nếu màn hình hiện tại chưa có trong ảnh mẫu thì lưu làm mẫu mới. |
+| F9 | +1. Nếu màn hình hiện tại chưa là ảnh mẫu thì lưu làm mẫu. |
 | F10 | −1 (sửa khi đếm nhầm). |
-| F11 | Chỉ chụp ảnh mẫu, không đếm. |
+| F11 | Chỉ lưu ảnh mẫu, không đếm. |
 | F8 | Bật/tắt tự nhận diện. |
-| F7 | Ẩn/hiện cửa sổ app (cũng gọi lại cửa sổ sau khi nó tự thu nhỏ vì game). Nhận diện, overlay và OBS vẫn chạy. |
+| F7 | Ẩn/hiện cửa sổ app (cũng dùng để mở lại sau khi app tự thu nhỏ vì game). Nhận diện, overlay và OBS vẫn chạy. |
 | Ctrl+Alt+T | Bật/tắt dịch. |
 | Ctrl+Alt+R | Khoanh lại vùng hội thoại để dịch. |
+| Ctrl+Alt+V | Đọc bản dịch. Đổi ở Translate → Thuyết minh → **Gán...**. |
 
-Phím tắt hoạt động cả khi đang ở trong game. Game sẽ không nhận được các phím này.
-Đổi phím: mở `config.json` trong thư mục dữ liệu, sửa mục `hotkeys` (ví dụ `"add": "Ctrl+F9"`), rồi mở lại app.
+Phím tắt dùng được khi đang trong game; game không nhận các phím này. Muốn đổi các phím còn lại, sửa `hotkeys` trong `config.json` (ví dụ `"add": "Ctrl+F9"`) rồi mở lại app.
 
 ## 8. Dữ liệu được lưu ở đâu
 
-Trong thư mục `ByrgenwerthData` cạnh file `Byrgenwerth.exe` (nút **Mở** ở tab Cài đặt):
+Trong `ByrgenwerthData` cạnh `Byrgenwerth.exe` (nút **Thư mục** ở tab Cài đặt):
 
 | File | Nội dung |
 |---|---|
-| `config.json` | Cài đặt chung: phím tắt, kiểu chữ, vị trí overlay... |
-| `profiles\<game>\profile.json` | Số đếm và từ khóa của từng game. |
+| `config.json` | Cài đặt chung: phím tắt, kiểu chữ, nhãn, vị trí overlay, thuyết minh... |
+| `profiles\<game>\profile.json` | Số đếm và từ khóa từng game. |
 | `profiles\<game>\templates\` | Ảnh mẫu màn chết. |
-| `history.csv` | Nhật ký từng lần +1/−1, mở bằng Excel được. |
+| `label.png` / `label.svg` | Hình nhãn, nếu bạn chọn. |
+| `piper\` | Bộ đọc và giọng thuyết minh, sau khi tải. |
+| `history.csv` | Nhật ký mọi lần +1/−1, mở được bằng Excel. |
 | `obs_deaths.txt` | File text cho OBS (nếu bật). |
-| `ocr-debug.log` | Mọi lần OCR đọc lúc game toàn màn hình đang ở trước (chữ, vị trí, cỡ chữ), và mọi lần đếm. Đầy 4 MB thì chuyển sang `ocr-debug.old.log`. Gửi kèm khi báo lỗi. |
-| `translate.key` | API key Anthropic, mã hóa theo tài khoản Windows của bạn. |
-| `ocr-misses.log` | Chữ OCR đọc được trong 10 giây trước mỗi lần bấm F9 +1, tức là những lần app bỏ sót. Gửi kèm khi báo lỗi. |
+| `ocr-debug.log` | Mọi lần OCR đọc khi game toàn màn hình đang ở phía trước (chữ, vị trí, cỡ chữ), và mọi lần đếm. Đầy 4 MB thì chuyển sang `ocr-debug.old.log`. Gửi kèm khi báo lỗi. |
+| `translate.key` | API key Anthropic của bạn, mã hóa theo tài khoản Windows. |
+| `ocr-misses.log` | Chữ OCR đọc được trong 10 giây trước mỗi lần bấm F9 +1, tức các lần app bỏ sót. Gửi kèm khi báo lỗi. |
 
-Sao lưu: copy cả thư mục này.
+Sao lưu bằng cách chép cả thư mục.
 
 ## 9. Xử lý sự cố
 
-### Chết mà không tự đếm
-- Bấm F9 ngay: app cộng 1 và ghi những gì OCR đọc được vào `ocr-misses.log` trong thư mục dữ liệu. File này cho biết vì sao bị sót.
-- Xem **Trạng thái OCR** lúc màn chết hiện.
-  - "Không thấy chữ" hoặc đọc ra chữ lạ: chữ cách điệu. Dùng F9 + Khoanh vùng (mục 4).
-  - Thấy đúng chữ nhưng "không phải từ khóa": thêm chữ đó vào ô **Từ khóa**.
-- Game đang chạy Exclusive Fullscreen: chuyển sang Borderless.
-- Có nhiều màn hình: kiểm tra **Màn hình game**.
+### Chết mà không đếm
+- Bấm F9 ngay: app cộng 1 và ghi chữ OCR đọc được vào `ocr-misses.log` trong thư mục dữ liệu. File này cho biết vì sao bị sót.
+- Xem dòng **OCR** lúc màn chết đang hiện.
+  - Không đọc được gì hoặc đọc ra chữ lạ: chữ cách điệu. Dùng F9 + khoanh vùng (mục 3).
+  - Đọc đúng chữ nhưng báo "không phải từ khóa": thêm chữ đó vào **Từ khóa**.
+- Game đang Exclusive Fullscreen: chuyển sang Borderless.
+- Nhiều màn hình: kiểm tra **Màn hình**.
 
 ### Đếm nhầm
-- Bấm F10 để trừ.
-- Xem tab Nhận diện: xóa ảnh mẫu chụp sai, tăng **Ngưỡng**, khoanh **Vùng nhận diện** sát hơn.
+- Bấm F10.
+- Xóa ảnh mẫu sai, tăng **Ngưỡng**, khoanh **Vùng** sát hơn.
 
 ### Phím tắt không chạy
-Dòng trạng thái báo "Cảnh báo phím tắt" nghĩa là phần mềm khác đang giữ phím đó. Đổi phím trong `config.json` (mục 7).
+Dòng trạng thái báo "Cảnh báo phím tắt" khi phím đã bị chương trình khác dùng. Đổi phím trong `config.json`, hoặc với phím đọc bản dịch thì dùng **Gán...**.
 
-### Overlay không hiện trên game
-Game đang ở Exclusive Fullscreen. Chuyển sang Borderless.
+### Không thấy overlay trong game
+Game đang Exclusive Fullscreen. Chuyển sang Borderless.
 
 ### OCR không đọc được game tiếng Trung/Nhật/Việt
-1. Windows *Settings → Time & language → Language & region → Add a language*, thêm ngôn ngữ của game.
-2. Mở lại app, chọn ngôn ngữ đó ở **Ngôn ngữ game** (tab Nhận diện).
-3. Thêm từ khóa màn chết bằng ngôn ngữ đó vào ô **Từ khóa**. Không cần đúng dấu: "BẠN ĐÃ CHẾT" khớp cả "BAN DA CHET". Mẫu của các game hiện "YOU DIED" đã có sẵn "BẠN ĐÃ CHẾT" cho bản Việt hóa.
+1. Vào Windows *Settings → Time & language → Language & region → Add a language*, thêm ngôn ngữ của game.
+2. Mở lại app và chọn ngôn ngữ đó ở **Ngôn ngữ** (tab Nhận diện).
+3. Thêm chữ chết bằng ngôn ngữ đó vào **Từ khóa**. Dấu không quan trọng: "BẠN ĐÃ CHẾT" khớp cả "BAN DA CHET".
 
-### OBS không hiện Browser Source
-- App phải đang mở.
-- Kiểm tra URL: cổng có thể khác 17321 nếu cổng đó bận; luôn copy URL từ app.
+### OBS không hiện gì
+- App phải đang chạy.
+- Cổng có thể khác 17321 nếu bị chiếm; luôn copy URL từ app.
 
-## 10. Tab Translate: dịch hội thoại theo thời gian thực
+## 10. Translate: dịch hội thoại theo thời gian thực
 
-App đọc vùng hội thoại trong game và hiện bản dịch tiếng Việt trong một khung ngay cạnh vùng đó. Hiện chỉ dịch từ tiếng Anh sang tiếng Việt.
+Tab **Dịch** đọc vùng hội thoại trong game rồi hiện bản dịch tiếng Việt trong một khung ngay cạnh đó. Chỉ dịch từ tiếng Anh sang tiếng Việt.
 
-1. Lấy API key ở [console.anthropic.com](https://console.anthropic.com), dán vào ô **API key**. Bạn trả phí cho Anthropic theo lượng dùng; dòng **Chi phí ước tính** cộng dồn từ số token và bảng giá, tính lại từ đầu khi đổi key hoặc đổi game.
-2. Mở game, bấm **Ctrl+Alt+R** rồi kéo chuột khoanh khung hội thoại. Khoanh càng hẹp càng đỡ tốn phí và càng ít đọc nhầm. Bấm phím này ngay trong game cũng được, hoặc dùng nút **Khoanh vùng...** trong tab.
-3. Tick **Bật dịch** hoặc bấm **Ctrl+Alt+T**. Mỗi lần mở app, phần dịch luôn tắt, nên chưa bật thì không có gì được gửi đi.
+1. Lấy API key ở [console.anthropic.com](https://console.anthropic.com) rồi dán vào ô **API key**. Bạn trả phí cho Anthropic theo lượng dùng; chi phí ước tính được cộng dồn từ số token và bảng giá. Chi phí tính lại từ đầu khi đổi key hoặc đổi game.
+2. Mở game, bấm **Ctrl+Alt+R** rồi kéo chuột khoanh khung hội thoại. Khoanh càng hẹp càng đỡ tốn phí và càng ít đọc nhầm. Nút **Khoanh...** trong tab cũng làm việc này.
+3. Tích **Bật dịch Anh → Việt** hoặc bấm **Ctrl+Alt+T**. Mỗi lần mở app, dịch luôn ở trạng thái tắt, nên chưa bật thì không gửi gì.
 
 Cần biết:
 
-- **Dữ liệu gửi đi**: chữ OCR đọc được trong vùng khoanh, 8 câu trước đó và tên game đang chọn được gửi tới API của Anthropic (`claude-haiku-5-5`). Ảnh màn hình không được gửi, chữ ngoài vùng khoanh cũng không.
-- **API key** được mã hóa theo tài khoản Windows của bạn (DPAPI) trong file `translate.key`. Gỡ app sẽ xóa file này.
-- App chờ chữ đứng yên rồi mới dịch, nên chữ hiện dần sẽ đợi hiện hết. Câu lặp lại lấy từ cache, không tốn phí.
-- Khi lỗi, khung hiện câu tiếng Anh kèm lý do. Vùng có hơn 500 ký tự sẽ không dịch: hãy khoanh hẹp lại.
-- Windows cần có gói OCR tiếng Anh: *Settings → Time & language → Language & region*.
-- Game phải chạy **Borderless** hoặc **Windowed**, nếu không khung dịch không hiện được phía trên.
-- Phần dịch mới thêm và chưa được thử với game thật. Có thể còn lỗi.
+- **Dữ liệu gửi ra ngoài**: chữ OCR đọc được trong vùng khoanh, 8 câu trước đó và tên game đang chọn được gửi tới API của Anthropic (`claude-haiku-5-5`). Ảnh chụp màn hình không được gửi, phần ngoài vùng khoanh cũng không.
+- **Key** được mã hóa theo tài khoản Windows (DPAPI) trong file `translate.key`. Gỡ app là xóa luôn.
+- Một câu chỉ được dịch khi chữ đã đứng yên, nên chữ hiện từng ký tự sẽ đợi hiện xong. Câu lặp lại lấy từ cache, không tốn phí.
+- Khi lỗi, khung hiện câu tiếng Anh kèm lý do. Vùng khoanh có hơn 500 ký tự thì không dịch: hãy khoanh hẹp lại.
+- Windows cần có OCR tiếng Anh: *Settings → Time & language → Language & region*.
+- Game phải chạy **Borderless** hoặc **Windowed**, nếu không khung dịch không hiện đè lên được.
+- Tính năng dịch chưa được thử với nhiều game. Có thể còn lỗi.
+
+## 11. Thuyết minh tiếng Việt
+
+Tab **Thuyết minh** đọc to bản dịch tiếng Việt khi bạn bấm phím hoặc nút tay cầm.
+
+1. Chọn giọng ở **Giọng**: **Nữ** hoặc **Nam**. Bấm **Tải** một lần. App tải [Piper](https://github.com/rhasspy/piper) (22 MB) và giọng đọc (nữ 63 MB, nam 28 MB), kiểm tra từng file theo mã hash cố định, rồi lưu trong `ByrgenwerthData\piper`.
+2. **Nghe thử** để nghe mẫu. **Tốc độ** chỉnh tốc độ đọc (0 = bình thường, +50 = nhanh hơn, −50 = chậm hơn), **Âm lượng** chỉnh âm lượng.
+3. Gán phím bằng **Gán...** cạnh **Bàn phím** (mặc định **Ctrl+Alt+V**), gán tổ hợp nút tay cầm bằng **Gán...** cạnh **Tay cầm**: giữ cùng lúc các nút rồi thả ra.
+4. Trong game, bấm phím hoặc tổ hợp nút: bản dịch đang hiện (hoặc bản dịch gần nhất) được đọc to. Bấm lần nữa để dừng. Nút **Đọc dịch** trong app cũng làm việc này.
+
+Cần biết:
+
+- Thuyết minh chạy **ngay trên máy**. Tải xong thì không cần internet và không gửi chữ đi đâu.
+- Giọng đọc là giọng tiếng Việt miễn phí của Piper: giọng nữ `vais1000` (chất lượng trung bình), giọng nam là một người đọc trong bộ `vivos` (chất lượng thấp hơn). Nghe vẫn rõ là giọng máy.
+- Tay cầm: tay Xbox, hoặc tay được Windows nhận như tay Xbox (Steam Input, DS4Windows). Game cũng nhận nút bạn bấm, nên chọn tổ hợp game không dùng, ví dụ **LB+RB+Y**.
+- Phải có bản dịch mới đọc được, nên bật **Bật dịch** trước.

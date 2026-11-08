@@ -33,7 +33,8 @@ func TestServeDemo(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s.Set(StateFromConfig(c, FormatObs("{game} · Deaths: {count}", "Wuchang", 12+i)))
+		c.LabelText = "{game} · Deaths"
+		s.Set(StateFromConfig(c, "Wuchang", 12+i, 0))
 	}
 	time.Sleep(25 * time.Second)
 }

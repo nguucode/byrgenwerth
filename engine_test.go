@@ -20,7 +20,6 @@ type fakeUI struct {
 func (f *fakeUI) sync(g func())                    { g() }
 func (f *fakeUI) setStatus(s string)               { f.status = s }
 func (f *fakeUI) simText(string)                   {}
-func (f *fakeUI) hpText(string)                    {}
 func (f *fakeUI) ocrText(string)                   {}
 func (f *fakeUI) setOcrLanguages([]OcrLang)        {}
 func (f *fakeUI) ownRects() []ROI                  { return f.own }
