@@ -42,7 +42,10 @@ cat > "$app/Contents/Info.plist" <<PLIST
 PLIST
 
 rm -rf dist/tmp
-# Not notarized: an ad-hoc signature is what lets the app run on Apple Silicon.
-codesign --force --deep --sign - "$app"
+# Not notarized. Releases sign with the self-signed certificate from
+# scripts/make-signing-cert.sh (MAC_SIGN_IDENTITY): the signature then stays the
+# same across builds, so macOS keeps the Screen Recording permission on update.
+# Without it the signature is ad-hoc, enough to run on Apple Silicon.
+codesign --force --deep --sign "${MAC_SIGN_IDENTITY:--}" "$app"
 (cd dist && ditto -c -k --keepParent Byrgenwerth.app Byrgenwerth-macos.zip)
 echo "Built $app"

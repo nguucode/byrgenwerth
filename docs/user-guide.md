@@ -46,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.s
 
 The app goes to `~/Applications`, with its data in `~/Library/Application Support/Byrgenwerth`. Run the command again to update. It has no Dock icon: use **Byrgenwerth** in the menu bar to open the window or quit.
 
-- Allow **Screen Recording** when macOS asks, then open the app again. The app is not signed with an Apple developer ID, so every update counts as a new app for macOS: the installer clears the old permission and macOS asks again. If Settings shows Byrgenwerth switched on but the app still says it has no permission, run `tccutil reset ScreenCapture com.nguucode.byrgenwerth` in Terminal, open the app, allow, then open it again.
+- Allow **Screen Recording** when macOS asks, then open the app again. From v0.11.2 on, updates keep the permission. Updating from an older version asks once more: those builds had a signature that changed with every update, and the installer clears their stale permission. If Settings shows Byrgenwerth switched on but the app still says it has no permission, run `tccutil reset ScreenCapture com.nguucode.byrgenwerth` in Terminal, open the app, allow, then open it again.
 - The API key is kept in the Keychain.
 - F keys need **fn** on most Mac keyboards, unless *Use F1, F2 as standard function keys* is on. F11 is also the default Show Desktop shortcut, so **Chụp mẫu ngay** may be the easier way to capture a template. To change hotkeys, edit `hotkeys` in `config.json`.
 - The Mac version has not been tried with a game yet. Most Windows games reach a Mac through a translation layer, so expect differences in what can be read.

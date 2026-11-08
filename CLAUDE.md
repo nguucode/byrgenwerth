@@ -9,4 +9,4 @@ Project info (status, decisions, research) lives in the Obsidian vault, not in t
 - User-facing docs: `README.md` (EN + VI), `docs/user-guide.md`, `docs/huong-dan-su-dung.md`. Keep all of them in sync with the code.
 - Death-screen research behind the presets: `docs/death-screens-top100.csv`; presets in `presets.json`.
 - Test: `go test ./...`. Build: `GOOS=windows GOARCH=amd64 go build -ldflags "-H windowsgui -s -w" -o Byrgenwerth.exe .` Mac: `scripts/build-mac.sh` (put `dist` on APFS: codesign fails on exFAT).
-- Release: push a `v*` tag or run the release workflow from the Actions tab (`.github/workflows/release.yml`).
+- Release: push a `v*` tag or run the release workflow from the Actions tab (`.github/workflows/release.yml`). The Mac build is signed with a self-signed certificate from the secrets `MAC_CERT_P12`/`MAC_CERT_PASSWORD` (made once by `scripts/make-signing-cert.sh`) so Screen Recording survives updates; a release without them fails. Do not regenerate the certificate unless it leaked: every Mac user would have to grant the permission again.
