@@ -57,7 +57,8 @@ Stop-App 'Byrgenwerth'
 
 New-Item -ItemType Directory -Force $dir | Out-Null
 $tmp = "$exe.download"
-Invoke-WebRequest $asset.browser_download_url -OutFile $tmp -UseBasicParsing
+# The API link: github.com/.../releases/download can answer 504 while the API link still works.
+Invoke-WebRequest $asset.url -Headers @{ Accept = 'application/octet-stream' } -OutFile $tmp -UseBasicParsing
 Move-Item -Force $tmp $exe
 # Left behind by Death Counter, removed only once the new exe is in place.
 Remove-Item (Join-Path $dir 'DeathCounter.exe') -ErrorAction SilentlyContinue

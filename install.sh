@@ -8,11 +8,21 @@ dest="$HOME/Applications"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-# Downloaded with curl, so macOS does not quarantine this unnotarized app.
-curl -fsSL "https://github.com/$repo/releases/latest/download/Byrgenwerth-macos.zip" -o "$tmp/app.zip" || {
+fail() {
 	echo "Could not download the Mac build. If a release just came out, it may still be building: try again in a few minutes." >&2
 	exit 1
 }
+# Through the API, not github.com/.../releases/download: that link can answer 504
+# while the API asset link still works.
+curl -fsSL "https://api.github.com/repos/$repo/releases/latest" -o "$tmp/release.json" || fail
+url= i=0
+while name=$(plutil -extract "assets.$i.name" raw "$tmp/release.json" 2>/dev/null); do
+	[ "$name" = Byrgenwerth-macos.zip ] && url=$(plutil -extract "assets.$i.url" raw "$tmp/release.json") && break
+	i=$((i + 1))
+done
+[ -n "$url" ] || fail
+# Downloaded with curl, so macOS does not quarantine this unnotarized app.
+curl -fsSL -H 'Accept: application/octet-stream' "$url" -o "$tmp/app.zip" || fail
 ditto -x -k "$tmp/app.zip" "$tmp"
 
 pkill -x Byrgenwerth 2>/dev/null && sleep 1 || true
