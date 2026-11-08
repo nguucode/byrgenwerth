@@ -59,51 +59,50 @@ type App struct {
 	countLbl   *walk.Label
 	autoCB     *walk.CheckBox
 	simLbl     *walk.Label
-	thrSlider  *walk.Slider
-	thrLbl     *walk.Label
+	thrNE      *walk.NumberEdit
 	cooldownNE *walk.NumberEdit
 	monCB      *walk.ComboBox
 	roiLbl     *walk.Label
 	tmplLB     *walk.ListBox
 	tmplIV     *walk.ImageView
-	tmplInfo   *walk.TextLabel
-	obsLE      *walk.LineEdit
-	obsPathLE  *walk.LineEdit
+	tmplInfo   *walk.Label
 	topCB      *walk.CheckBox
 	soundCB    *walk.CheckBox
 	obsCB      *walk.CheckBox
 	overlayCB  *walk.CheckBox
 	fontNE     *walk.NumberEdit
 	fontCB     *walk.ComboBox
-	presetCB   *walk.ComboBox
-	presetLbl  *walk.TextLabel
 
-	langCB     *walk.ComboBox
-	ocrLangs   []OcrLang
-	hpCB       *walk.CheckBox
-	hpLbl      *walk.Label
-	hpZoneLbl  *walk.Label
-	boldCB     *walk.CheckBox
-	colorSw    *walk.Composite
-	colorLbl   *walk.Label
-	outlineCB  *walk.CheckBox
-	outlineNE  *walk.NumberEdit
-	outlineSw  *walk.Composite
-	outlineLbl *walk.Label
-	urlLE      *walk.LineEdit
-	server     *OverlayServer
-	swBrushes  []*walk.SolidColorBrush
-	editPosPB  *walk.PushButton
-	volSlider  *walk.Slider
-	soundLbl   *walk.Label
-	ocrCB      *walk.CheckBox
-	ocrLbl     *walk.Label
-	kwLE       *walk.LineEdit
+	labelModeCB *walk.ComboBox
+	labelTextLE *walk.LineEdit
+	labelImgLE  *walk.LineEdit
+	labelSizeNE *walk.NumberEdit
+	cornerCB    *walk.ComboBox
+	labelImg    *image.RGBA // the picture at its current size, nil when none
+	labelImgVer int         // bumped on each new picture so OBS reloads it
+
+	narr narration
+
+	langCB    *walk.ComboBox
+	ocrLangs  []OcrLang
+	boldCB    *walk.CheckBox
+	colorPB   *walk.PushButton
+	outlineCB *walk.CheckBox
+	outlineNE *walk.NumberEdit
+	outlinePB *walk.PushButton
+	urlLE     *walk.LineEdit
+	server    *OverlayServer
+	editPosPB *walk.PushButton
+	volNE     *walk.NumberEdit
+	soundLE   *walk.LineEdit
+	ocrCB     *walk.CheckBox
+	ocrLbl    *walk.Label
+	kwLE      *walk.LineEdit
 
 	overlay    *Overlay
 	sound      Sound
 	statusLbl  *walk.Label
-	hkLbl      *walk.Label
+	hkLbl      *walk.TextLabel
 	previewBmp *walk.Bitmap
 }
 
@@ -189,6 +188,39 @@ var (
 	hintColor = walk.RGB(110, 110, 110)
 )
 
+// Every input shares one size and every button another, so the columns line up.
+const (
+	inputW  = 150
+	buttonW = 80
+)
+
+var (
+	inSize = Size{Width: inputW}
+	// Heights stay native: a box (HBox) sizes rows from native heights, so a
+	// taller forced button gets its frame cut.
+	btnSize = Size{Width: buttonW}
+	labelSz = Size{Width: 64} // first column of every form
+)
+
+// sized gives inputs and buttons their shared size.
+func sized(w Widget) Widget {
+	switch c := w.(type) {
+	case PushButton:
+		c.MinSize, c.MaxSize = btnSize, btnSize
+		return c
+	case LineEdit:
+		c.MinSize, c.MaxSize = inSize, inSize
+		return c
+	case ComboBox:
+		c.MinSize, c.MaxSize = inSize, inSize
+		return c
+	case NumberEdit:
+		c.MinSize, c.MaxSize = inSize, inSize
+		return c
+	}
+	return w
+}
+
 // title is a bold section heading.
 func title(text string) Widget {
 	return Label{Text: text, Font: titleFont}
@@ -210,14 +242,35 @@ func sep() Widget {
 	}
 }
 
-// form lays out label/control pairs in two aligned columns.
+// form lays out label/control pairs in two aligned columns, left-aligned.
 func form(cells ...Widget) Widget {
-	return Composite{Layout: Grid{Columns: 2, MarginsZero: true, Spacing: 6}, Children: cells}
+	for i := 0; i < len(cells); i += 2 {
+		if l, ok := cells[i].(Label); ok {
+			l.MinSize = labelSz
+			cells[i] = l
+		}
+		// A grid stretches its cells to the column width and ignores MaxSize:
+		// wrapped in a row, a box keeps the shared input width.
+		if i+1 < len(cells) {
+			if _, ok := cells[i+1].(Composite); !ok {
+				cells[i+1] = row(cells[i+1])
+			}
+		}
+	}
+	return Composite{Layout: Grid{Columns: 2, MarginsZero: true, Spacing: 4, Alignment: AlignHNearVCenter}, Children: cells}
 }
 
-// row puts several controls side by side inside one form cell.
+// row puts several controls side by side, packed to the left.
 func row(children ...Widget) Widget {
-	return Composite{Layout: HBox{MarginsZero: true, Spacing: 6}, Children: children}
+	for i, c := range children {
+		children[i] = sized(c)
+	}
+	return Composite{Layout: HBox{MarginsZero: true, Spacing: 4, Alignment: AlignHNearVCenter}, Children: append(children, HSpacer{})}
+}
+
+// pageLayout is the layout of every tab page.
+func pageLayout() Layout {
+	return VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}, Spacing: 4, Alignment: AlignHNearVNear}
 }
 
 func (a *App) buildUI() error {
@@ -225,125 +278,134 @@ func (a *App) buildUI() error {
 	for i, m := range a.monitors {
 		monNames[i] = m.Label(i)
 	}
-	pageLayout := VBox{Margins: Margins{Left: 10, Top: 10, Right: 10, Bottom: 10}, Spacing: 6}
+	cornerNames := make([]string, len(LabelCorners))
+	for i, c := range LabelCorners {
+		cornerNames[i] = CornerName(c)
+	}
+
+	// Death count: what to look for on screen.
 	detectTab := TabPage{
 		Title:  "Nhận diện",
-		Layout: pageLayout,
+		Layout: pageLayout(),
 		Children: []Widget{
-			title("Tự nhận diện"),
-			CheckBox{AssignTo: &a.autoCB, Text: "Bật tự nhận diện màn hình chết", OnCheckedChanged: a.onAutoChanged},
-			CheckBox{AssignTo: &a.ocrCB, Text: "Đọc chữ bằng OCR (không cần ảnh mẫu)", OnCheckedChanged: a.onOcrChanged},
-			form(
-				Label{Text: "Trạng thái OCR"}, Label{AssignTo: &a.ocrLbl, Text: "--", EllipsisMode: EllipsisEnd},
-				Label{Text: "Ngôn ngữ game"}, ComboBox{AssignTo: &a.langCB, Model: []string{"Theo Windows"}, OnCurrentIndexChanged: a.onLangChanged,
-					ToolTipText: "Thiếu ngôn ngữ? Windows Settings → Time & language → Language & region → Add a language."},
-				Label{Text: "Mẫu theo game"}, ComboBox{AssignTo: &a.presetCB, Model: a.presetNames(), OnCurrentIndexChanged: a.onPresetChanged},
-				Label{Text: "Từ khóa"}, LineEdit{AssignTo: &a.kwLE, Text: strings.Join(a.cfg.Keywords, ", "), OnEditingFinished: a.onKeywordsChanged},
+			row(
+				CheckBox{AssignTo: &a.autoCB, Text: "Tự nhận diện", OnCheckedChanged: a.onAutoChanged,
+					ToolTipText: "Tự đếm khi màn hình chết hiện ra (" + a.cfg.Hotkeys.Toggle + " bật/tắt)."},
+				CheckBox{AssignTo: &a.ocrCB, Text: "Đọc chữ (OCR)", OnCheckedChanged: a.onOcrChanged,
+					ToolTipText: "Đọc chữ trên màn hình bằng OCR của Windows, không cần ảnh mẫu."},
 			),
-			TextLabel{AssignTo: &a.presetLbl, Text: "Cách nhau bằng dấu phẩy. Thêm * ở cuối để khớp phần đầu câu.", TextColor: hintColor, MinSize: Size{Width: 100}},
-			sep(),
-			title("So khớp ảnh mẫu"),
 			form(
-				Label{Text: "Độ giống"}, Label{AssignTo: &a.simLbl, Text: "--"},
+				Label{Text: "Màn hình"}, ComboBox{AssignTo: &a.monCB, Model: monNames, CurrentIndex: a.cfg.Monitor, MinSize: inSize, MaxSize: inSize, OnCurrentIndexChanged: a.onMonitorChanged},
+				Label{Text: "Ngôn ngữ"}, ComboBox{AssignTo: &a.langCB, Model: []string{"Theo Windows"}, MinSize: inSize, MaxSize: inSize, OnCurrentIndexChanged: a.onLangChanged,
+					ToolTipText: "Ngôn ngữ chữ trong game. Thiếu ngôn ngữ? Windows Settings → Time & language → Language & region → Add a language."},
+				Label{Text: "Từ khóa"}, LineEdit{AssignTo: &a.kwLE, Text: strings.Join(a.cfg.Keywords, ", "), MinSize: inSize, MaxSize: inSize, OnEditingFinished: a.onKeywordsChanged,
+					ToolTipText: "Chữ hiện trên màn hình chết, cách nhau bằng dấu phẩy. Thêm * ở cuối để khớp phần đầu câu. Xóa hết để dùng bộ từ khóa chung."},
 				Label{Text: "Ngưỡng"}, row(
-					Slider{AssignTo: &a.thrSlider, MinValue: 50, MaxValue: 99, Value: 80, StretchFactor: 3, OnValueChanged: a.onThresholdChanged},
-					Label{AssignTo: &a.thrLbl, Text: "80%", MinSize: Size{Width: 36}},
+					NumberEdit{AssignTo: &a.thrNE, MinValue: 50, MaxValue: 99, Decimals: 0, Value: float64(DefaultThreshold * 100), SpinButtonsVisible: true, MinSize: inSize, MaxSize: inSize, OnValueChanged: a.onThresholdChanged,
+						ToolTipText: "Ảnh mẫu giống màn hình từ mức này trở lên thì tính là chết."},
+					Label{Text: "%"},
 				),
 				Label{Text: "Cooldown"}, row(
-					NumberEdit{AssignTo: &a.cooldownNE, MinValue: 1, MaxValue: 600, Decimals: 0, Value: 15.0, SpinButtonsVisible: true, MaxSize: Size{Width: 80}, OnValueChanged: a.onCooldownChanged},
+					NumberEdit{AssignTo: &a.cooldownNE, MinValue: 1, MaxValue: 600, Decimals: 0, Value: float64(DefaultCooldownSec), SpinButtonsVisible: true, MinSize: inSize, MaxSize: inSize, OnValueChanged: a.onCooldownChanged,
+						ToolTipText: "Thời gian tối thiểu giữa hai lần đếm."},
 					Label{Text: "giây"},
-					HSpacer{},
 				),
-				Label{Text: "Màn hình game"}, ComboBox{AssignTo: &a.monCB, Model: monNames, CurrentIndex: a.cfg.Monitor, OnCurrentIndexChanged: a.onMonitorChanged},
-				Label{Text: "Vùng nhận diện"}, row(
-					Label{AssignTo: &a.roiLbl, Text: "Toàn màn hình", StretchFactor: 3},
-					PushButton{Text: "Khoanh vùng...", OnClicked: a.editROI},
+				Label{Text: "Vùng"}, row(
+					Label{AssignTo: &a.roiLbl, Text: "Toàn màn hình"},
+					PushButton{Text: "Khoanh...", OnClicked: a.editROI, ToolTipText: "Khoanh sát dòng chữ chết (vd: YOU DIED) để nhận diện chính xác hơn."},
 				),
 			),
 			sep(),
-			title("Ảnh mẫu"),
-			TextLabel{AssignTo: &a.tmplInfo, Text: "Chưa có mẫu.", TextColor: hintColor, MinSize: Size{Width: 100}},
+			row(
+				title("Ảnh mẫu"),
+				Label{AssignTo: &a.tmplInfo, Text: "Chưa có mẫu.", TextColor: hintColor, EllipsisMode: EllipsisEnd},
+			),
 			Composite{
-				Layout: HBox{MarginsZero: true, Spacing: 6},
+				Layout: HBox{MarginsZero: true, Spacing: 4, Alignment: AlignHNearVNear},
 				Children: []Widget{
-					ListBox{AssignTo: &a.tmplLB, MinSize: Size{Width: 150, Height: 84}, OnCurrentIndexChanged: a.onTemplateSelected},
-					ImageView{AssignTo: &a.tmplIV, Mode: ImageViewModeZoom, MinSize: Size{Width: 150, Height: 84}, StretchFactor: 2},
+					ListBox{AssignTo: &a.tmplLB, MinSize: Size{Width: 108, Height: 56}, MaxSize: Size{Width: 108, Height: 56}, OnCurrentIndexChanged: a.onTemplateSelected},
+					ImageView{AssignTo: &a.tmplIV, Mode: ImageViewModeZoom, MinSize: Size{Width: 100, Height: 56}, MaxSize: Size{Width: 100, Height: 56}},
+					Composite{
+						Layout: VBox{MarginsZero: true, Spacing: 4},
+						Children: []Widget{
+							sized(PushButton{Text: "Chụp mẫu", OnClicked: func() { a.captureTemplate(false) }, ToolTipText: "Chụp màn hình hiện tại làm ảnh mẫu (" + a.cfg.Hotkeys.Capture + ")."}),
+							sized(PushButton{Text: "Xóa mẫu", OnClicked: a.removeTemplate}),
+						},
+					},
+					HSpacer{},
 				},
 			},
-			row(
-				PushButton{Text: "Chụp mẫu ngay", OnClicked: func() { a.captureTemplate(false) }},
-				PushButton{Text: "Xóa mẫu đã chọn", OnClicked: a.removeTemplate},
-				HSpacer{},
-			),
 			sep(),
-			title("Máu nhân vật (game không có màn chết)"),
-			CheckBox{AssignTo: &a.hpCB, Text: "Đếm khi máu về 0 rồi màn hình tối đen", OnCheckedChanged: a.onHPChanged},
 			form(
-				Label{Text: "Thanh máu"}, row(
-					Label{AssignTo: &a.hpZoneLbl, Text: "Chưa khoanh", StretchFactor: 3},
-					PushButton{Text: "Khoanh thanh máu...", OnClicked: a.calibrateHP},
-				),
-				Label{Text: "Máu hiện tại"}, Label{AssignTo: &a.hpLbl, Text: "--"},
+				Label{Text: "OCR", TextColor: hintColor}, Label{AssignTo: &a.ocrLbl, Text: "--", TextColor: hintColor, EllipsisMode: EllipsisEnd, MinSize: inSize},
+				Label{Text: "Độ giống", TextColor: hintColor}, Label{AssignTo: &a.simLbl, Text: "--", TextColor: hintColor, EllipsisMode: EllipsisEnd, MinSize: inSize},
 			),
-			hint("Bấm khoanh lúc đang ĐẦY MÁU. Thanh máu gắn trên người nhân vật (Dead Space): khoanh rộng quanh chỗ nhân vật đứng."),
 			VSpacer{},
 		},
 	}
 
+	// Death count: how the count looks.
 	displayTab := TabPage{
 		Title:  "Hiển thị",
-		Layout: pageLayout,
+		Layout: pageLayout(),
 		Children: []Widget{
-			title("Nội dung"),
+			title("Nhãn"),
 			form(
-				Label{Text: "Định dạng"}, LineEdit{AssignTo: &a.obsLE, Text: a.cfg.ObsFormat, OnTextChanged: a.onObsFormatChanged},
+				Label{Text: "Kiểu"}, ComboBox{AssignTo: &a.labelModeCB, Model: []string{"Chữ", "Hình (PNG, SVG)", "Không có nhãn"}, MinSize: inSize, MaxSize: inSize, OnCurrentIndexChanged: a.onLabelModeChanged},
+				Label{Text: "Chữ"}, LineEdit{AssignTo: &a.labelTextLE, Text: a.cfg.LabelText, MinSize: inSize, MaxSize: inSize, OnTextChanged: a.onLabelTextChanged,
+					ToolTipText: "{game} = tên game."},
+				Label{Text: "Hình"}, row(
+					LineEdit{AssignTo: &a.labelImgLE, ReadOnly: true, Text: "Chưa chọn", MinSize: inSize, MaxSize: inSize},
+					PushButton{Text: "Chọn...", OnClicked: func() { a.chooseLabelImage() }},
+				),
+				Label{Text: "Cỡ"}, row(
+					NumberEdit{AssignTo: &a.labelSizeNE, MinValue: 8, MaxValue: 400, Decimals: 0, Value: float64(a.cfg.LabelSize), SpinButtonsVisible: true, MinSize: inSize, MaxSize: inSize, OnValueChanged: a.onLabelSizeChanged,
+						ToolTipText: "Cỡ chữ của nhãn, hoặc chiều cao của hình."},
+					Label{Text: "px"},
+				),
+				Label{Text: "Vị trí"}, ComboBox{AssignTo: &a.cornerCB, Model: cornerNames, CurrentIndex: max(CornerIndex(a.cfg.LabelCorner), 0), MinSize: inSize, MaxSize: inSize, OnCurrentIndexChanged: a.onCornerChanged,
+					ToolTipText: "Nhãn nằm ở góc nào quanh số đếm."},
 			),
-			hint("{count} = số lần chết, {game} = tên game."),
 			sep(),
-			title("Kiểu chữ (overlay + OBS)"),
+			title("Kiểu chữ"),
 			form(
-				Label{Text: "Font"}, ComboBox{AssignTo: &a.fontCB, Editable: true, Model: a.fontList(), OnCurrentIndexChanged: a.onStyleChanged, OnEditingFinished: a.onStyleChanged},
-				Label{Text: "Cỡ chữ"}, row(
-					NumberEdit{AssignTo: &a.fontNE, MinValue: 10, MaxValue: 300, Decimals: 0, Value: float64(a.cfg.OverlayFontSize), SpinButtonsVisible: true, MaxSize: Size{Width: 80}, OnValueChanged: a.onStyleChanged},
+				Label{Text: "Font"}, ComboBox{AssignTo: &a.fontCB, Editable: true, Model: a.fontList(), MinSize: inSize, MaxSize: inSize, OnCurrentIndexChanged: a.onStyleChanged, OnEditingFinished: a.onStyleChanged},
+				Label{Text: "Cỡ số"}, row(
+					NumberEdit{AssignTo: &a.fontNE, MinValue: 10, MaxValue: 300, Decimals: 0, Value: float64(a.cfg.OverlayFontSize), SpinButtonsVisible: true, MinSize: inSize, MaxSize: inSize, OnValueChanged: a.onStyleChanged},
 					Label{Text: "px"},
 					CheckBox{AssignTo: &a.boldCB, Text: "Đậm", Checked: a.cfg.FontBold, OnCheckedChanged: a.onStyleChanged},
-					HSpacer{},
-				),
-				Label{Text: "Màu chữ"}, row(
-					Composite{AssignTo: &a.colorSw, MinSize: Size{Width: 40, Height: 22}, MaxSize: Size{Width: 40, Height: 22}},
-					Label{AssignTo: &a.colorLbl, Text: a.cfg.TextColor, MinSize: Size{Width: 60}},
-					PushButton{Text: "Chọn màu...", OnClicked: func() { a.pickColor(false) }},
-					HSpacer{},
 				),
 				Label{Text: "Viền"}, row(
-					CheckBox{AssignTo: &a.outlineCB, Text: "Bật", Checked: a.cfg.Outline, OnCheckedChanged: a.onStyleChanged},
-					NumberEdit{AssignTo: &a.outlineNE, MinValue: 1, MaxValue: 30, Decimals: 0, Value: float64(maxInt(a.cfg.OutlineWidth, 1)), SpinButtonsVisible: true, MaxSize: Size{Width: 64}, OnValueChanged: a.onStyleChanged},
+					NumberEdit{AssignTo: &a.outlineNE, MinValue: 1, MaxValue: 30, Decimals: 0, Value: float64(maxInt(a.cfg.OutlineWidth, 1)), SpinButtonsVisible: true, MinSize: inSize, MaxSize: inSize, OnValueChanged: a.onStyleChanged},
 					Label{Text: "px"},
-					HSpacer{},
+					CheckBox{AssignTo: &a.outlineCB, Text: "Bật", Checked: a.cfg.Outline, OnCheckedChanged: a.onStyleChanged},
 				),
-				Label{Text: "Màu viền"}, row(
-					Composite{AssignTo: &a.outlineSw, MinSize: Size{Width: 40, Height: 22}, MaxSize: Size{Width: 40, Height: 22}},
-					Label{AssignTo: &a.outlineLbl, Text: a.cfg.OutlineColor, MinSize: Size{Width: 60}},
-					PushButton{Text: "Chọn màu...", OnClicked: func() { a.pickColor(true) }},
-					HSpacer{},
+				Label{Text: "Màu"}, row(
+					PushButton{AssignTo: &a.colorPB, Text: "Chữ", OnClicked: func() { a.pickColor(false) }},
+					PushButton{AssignTo: &a.outlinePB, Text: "Viền", OnClicked: func() { a.pickColor(true) }},
 				),
 			),
-			sep(),
-			title("Overlay trên màn hình"),
-			CheckBox{AssignTo: &a.overlayCB, Text: "Hiện overlay nổi trên game", Checked: a.cfg.OverlayEnabled, OnCheckedChanged: a.onOverlayEnabledChanged},
-			form(
-				Label{Text: "Vị trí"}, row(
-					PushButton{AssignTo: &a.editPosPB, Text: "Chỉnh vị trí overlay", OnClicked: a.toggleOverlayEdit},
-					PushButton{Text: "Đặt lại", OnClicked: a.resetOverlayPos},
-					HSpacer{},
-				),
+			VSpacer{},
+		},
+	}
+
+	// Death count: where the count shows up.
+	outputTab := TabPage{
+		Title:  "Overlay/OBS",
+		Layout: pageLayout(),
+		Children: []Widget{
+			title("Overlay trên game"),
+			row(
+				CheckBox{AssignTo: &a.overlayCB, Text: "Hiện", Checked: a.cfg.OverlayEnabled, OnCheckedChanged: a.onOverlayEnabledChanged},
+				PushButton{AssignTo: &a.editPosPB, Text: "Kéo vị trí", OnClicked: a.toggleOverlayEdit},
+				PushButton{Text: "Đặt lại", OnClicked: a.resetOverlayPos},
 			),
 			hint("OBS chỉ thấy overlay này khi dùng Display Capture."),
 			sep(),
 			title("OBS"),
 			form(
-				Label{Text: "Browser Source"}, row(
-					LineEdit{AssignTo: &a.urlLE, ReadOnly: true, Text: "(đang khởi động...)", StretchFactor: 3},
+				Label{Text: "Browser"}, row(
+					LineEdit{AssignTo: &a.urlLE, ReadOnly: true, Text: "(đang khởi động...)", MinSize: inSize, MaxSize: inSize},
 					PushButton{Text: "Copy", OnClicked: func() {
 						if a.server != nil {
 							walk.Clipboard().SetText(a.server.URL())
@@ -351,118 +413,112 @@ func (a *App) buildUI() error {
 						}
 					}},
 				),
-			),
-			hint("Giữ đúng kiểu chữ, dùng được với Game Capture. Đặt Width 1200, Height 250."),
-			CheckBox{AssignTo: &a.obsCB, Text: "Ghi thêm file text (Text source, không có style)", Checked: a.cfg.ObsEnabled, OnCheckedChanged: a.onObsEnabledChanged},
-			form(
-				Label{Text: "File"}, row(
-					LineEdit{AssignTo: &a.obsPathLE, ReadOnly: true, Text: a.store.ObsPath(), StretchFactor: 3},
-					PushButton{Text: "Copy", OnClicked: func() {
+				Label{Text: "File text"}, row(
+					CheckBox{AssignTo: &a.obsCB, Text: "Ghi file", Checked: a.cfg.ObsEnabled, OnCheckedChanged: a.onObsEnabledChanged,
+						ToolTipText: "Ghi số đếm ra file cho Text source của OBS (không có kiểu chữ)."},
+					PushButton{Text: "Copy", ToolTipText: "Copy đường dẫn file", OnClicked: func() {
 						walk.Clipboard().SetText(a.store.ObsPath())
 						a.setStatus("Đã copy đường dẫn file OBS.")
 					}},
-					PushButton{Text: "Mở thư mục", OnClicked: a.openDataDir},
 				),
 			),
+			hint("Browser Source giữ đúng kiểu chữ và nhãn, dùng được với Game Capture. Đặt Width 1200, Height 400."),
 			VSpacer{},
 		},
 	}
 
-	soundTab := TabPage{
+	settingsTab := TabPage{
 		Title:  "Cài đặt",
-		Layout: pageLayout,
+		Layout: pageLayout(),
 		Children: []Widget{
-			title("Âm thanh xác nhận"),
-			CheckBox{AssignTo: &a.soundCB, Text: "Phát âm thanh mỗi lần đếm +1", Checked: a.cfg.Sound, OnCheckedChanged: func() {
-				if a.soundCB == nil {
-					return
-				}
-				a.cfg.Sound = a.soundCB.Checked()
-				a.saveConfig()
-			}},
+			title("Âm thanh mỗi lần +1"),
 			form(
-				Label{Text: "Âm lượng"}, row(
-					Slider{AssignTo: &a.volSlider, MinValue: 0, MaxValue: 100, Value: a.cfg.SoundVolume, StretchFactor: 3, OnValueChanged: a.onVolumeChanged},
-					PushButton{Text: "Nghe thử", OnClicked: a.testSound},
+				Label{Text: "File"}, row(
+					LineEdit{AssignTo: &a.soundLE, ReadOnly: true, Text: "Chưa chọn", MinSize: inSize, MaxSize: inSize},
+					PushButton{Text: "Chọn...", OnClicked: a.chooseSound, ToolTipText: "File .mp3 hoặc .wav của bạn."},
 				),
-				Label{Text: "File âm thanh"}, row(
-					Label{AssignTo: &a.soundLbl, Text: "Chưa chọn", StretchFactor: 3, EllipsisMode: EllipsisPath},
-					PushButton{Text: "Chọn file...", OnClicked: a.chooseSound},
-					PushButton{Text: "Bỏ âm thanh", OnClicked: func() { a.setSoundFile("") }},
+				Label{Text: "Âm lượng"}, row(
+					NumberEdit{AssignTo: &a.volNE, MinValue: 0, MaxValue: 100, Decimals: 0, Value: float64(a.cfg.SoundVolume), SpinButtonsVisible: true, MinSize: inSize, MaxSize: inSize, OnValueChanged: a.onVolumeChanged,
+						ToolTipText: "Chỉ áp dụng cho mp3."},
+					Label{Text: "%"},
+				),
+				Label{Text: ""}, row(
+					CheckBox{AssignTo: &a.soundCB, Text: "Bật", Checked: a.cfg.Sound, OnCheckedChanged: func() {
+						if a.soundCB == nil {
+							return
+						}
+						a.cfg.Sound = a.soundCB.Checked()
+						a.saveConfig()
+					}},
+					PushButton{Text: "Nghe thử", OnClicked: a.testSound},
+					PushButton{Text: "Bỏ file", OnClicked: func() { a.setSoundFile("") }},
 				),
 			),
-			hint("App không kèm sẵn âm thanh: tự chọn file .mp3 hoặc .wav của bạn. Âm lượng chỉ áp dụng cho mp3."),
+			sep(),
+			title("Game đang chọn"),
+			row(
+				PushButton{Text: "Đổi tên", OnClicked: a.renameProfile},
+				PushButton{Text: "Xóa game", OnClicked: a.deleteProfile, ToolTipText: "Xóa game cùng số đếm và ảnh mẫu."},
+			),
+			sep(),
+			title("Phím tắt"),
+			TextLabel{AssignTo: &a.hkLbl, Text: "", TextColor: hintColor, MinSize: Size{Width: 100}},
 			sep(),
 			title("Dữ liệu"),
-			form(
-				Label{Text: "Thư mục"}, row(
-					LineEdit{ReadOnly: true, Text: a.store.Dir, StretchFactor: 3},
-					PushButton{Text: "Mở", OnClicked: a.openDataDir},
-				),
-			),
-			hint("Gồm số đếm, ảnh mẫu, cài đặt. Nằm cạnh file Byrgenwerth.exe."),
-			sep(),
-			title("Gỡ cài đặt"),
 			row(
-				PushButton{Text: "Gỡ Byrgenwerth...", OnClicked: func() { runUninstall(a) }},
-				HSpacer{},
+				PushButton{Text: "Thư mục", OnClicked: a.openDataDir, ToolTipText: "Mở " + a.store.Dir},
+				PushButton{Text: "Gỡ app...", OnClicked: func() { runUninstall(a) },
+					ToolTipText: "Xóa app, toàn bộ dữ liệu, shortcut và mục trong Apps & features. Không hoàn tác được."},
 			),
-			hint("Xóa app, toàn bộ dữ liệu, shortcut và mục trong Apps & features. Không hoàn tác được."),
+			hint("Số đếm, ảnh mẫu, cài đặt và giọng đọc nằm cạnh Byrgenwerth.exe."),
 			VSpacer{},
 		},
 	}
 
 	return MainWindow{
 		AssignTo: &a.mw,
-		Title:    "Byrgenwerth",
+		Title:    "Byrgenwerth v" + version,
 		Font:     uiFont,
-		Size:     Size{Width: 480, Height: 880},
-		MinSize:  Size{Width: 440, Height: 640},
-		Layout:   VBox{Margins: Margins{Left: 12, Top: 10, Right: 12, Bottom: 10}, Spacing: 8},
+		Size:     Size{Width: 360, Height: 560},
+		MinSize:  Size{Width: 350, Height: 480},
+		Layout:   VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 6}, Spacing: 6, Alignment: AlignHNearVNear},
 		Children: []Widget{
-			Label{Text: "Byrgenwerth v" + version, Font: Font{Family: "Segoe UI Semibold", PointSize: 13}},
-			row(
-				PushButton{AssignTo: &a.navDeath, Text: "Death count", OnClicked: func() { a.showPage(false) }},
-				PushButton{AssignTo: &a.navTranslate, Text: "Translate", OnClicked: func() { a.showPage(true) }},
-				HSpacer{},
-			),
+			Composite{
+				Layout: HBox{MarginsZero: true, Spacing: 4, Alignment: AlignHNearVCenter},
+				Children: []Widget{
+					sized(PushButton{AssignTo: &a.navDeath, Text: "Death count", OnClicked: func() { a.showPage(false) }}),
+					sized(PushButton{AssignTo: &a.navTranslate, Text: "Translate", OnClicked: func() { a.showPage(true) }}),
+					HSpacer{},
+					CheckBox{AssignTo: &a.topCB, Text: "Luôn trên", Checked: a.cfg.AlwaysOnTop, OnCheckedChanged: a.onTopChanged,
+						ToolTipText: "Cửa sổ app luôn nằm trên các cửa sổ khác"},
+				},
+			},
 			Composite{
 				AssignTo: &a.deathPage,
-				Border:   true,
-				Layout:   VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}, Spacing: 8},
+				Layout:   VBox{MarginsZero: true, Spacing: 6, Alignment: AlignHNearVNear},
 				Children: []Widget{
 					row(
-						ComboBox{AssignTo: &a.profileCB, StretchFactor: 3, OnCurrentIndexChanged: a.onProfileChanged},
-						PushButton{Text: "+ Thêm", OnClicked: a.addProfile},
-						PushButton{Text: "Đổi tên", OnClicked: a.renameProfile},
-						PushButton{Text: "Xóa", OnClicked: a.deleteProfile},
+						ComboBox{AssignTo: &a.profileCB, OnCurrentIndexChanged: a.onProfileChanged, ToolTipText: "Game đang đếm (đổi tên, xóa: tab Cài đặt)"},
+						PushButton{Text: "Thêm game", OnClicked: a.addProfile},
 					),
-					sep(),
 					row(
-						Composite{
-							Layout: VBox{MarginsZero: true, SpacingZero: true},
-							Children: []Widget{
-								Label{Text: "Số lần chết", Font: titleFont},
-								Label{
-									AssignTo:  &a.countLbl,
-									Text:      "0",
-									Font:      Font{Family: "Segoe UI", PointSize: 30, Bold: true},
-									TextColor: walk.RGB(200, 30, 30),
-								},
-							},
+						Label{
+							AssignTo:    &a.countLbl,
+							Text:        "0",
+							Font:        Font{Family: "Segoe UI", PointSize: 22, Bold: true},
+							TextColor:   walk.RGB(200, 30, 30),
+							MinSize:     Size{Width: 70},
+							ToolTipText: "Số lần chết",
 						},
-						HSpacer{},
-						PushButton{Text: "+1", MinSize: Size{Width: 56}, OnClicked: func() { a.addDeath(1, "button") }},
-						PushButton{Text: "−1", MinSize: Size{Width: 56}, OnClicked: func() { a.addDeath(-1, "button") }},
+						PushButton{Text: "+1", OnClicked: func() { a.addDeath(1, "button") }, ToolTipText: a.cfg.Hotkeys.Add},
+						PushButton{Text: "−1", OnClicked: func() { a.addDeath(-1, "button") }, ToolTipText: a.cfg.Hotkeys.Sub},
 						PushButton{Text: "Reset", OnClicked: a.resetCount},
 					),
-					TabWidget{Pages: []TabPage{detectTab, displayTab, soundTab}},
-					Label{AssignTo: &a.hkLbl, Text: "", TextColor: hintColor},
+					TabWidget{Pages: []TabPage{detectTab, displayTab, outputTab, settingsTab}},
 				},
 			},
 			a.translatePage(),
-			CheckBox{AssignTo: &a.topCB, Text: "Cửa sổ app luôn nằm trên", Checked: a.cfg.AlwaysOnTop, OnCheckedChanged: a.onTopChanged},
-			Label{AssignTo: &a.statusLbl, Text: "", EllipsisMode: EllipsisEnd},
+			Label{AssignTo: &a.statusLbl, Text: "", EllipsisMode: EllipsisEnd, TextColor: hintColor},
 		},
 	}.Create()
 }
@@ -488,6 +544,8 @@ func (a *App) init() {
 	a.outlineNE.SetEnabled(a.cfg.Outline)
 	a.initOverlay()
 	a.initTranslation()
+	a.initLabelUI()
+	a.initNarration()
 
 	var err error
 	a.profiles, err = a.store.LoadProfiles()
@@ -511,13 +569,10 @@ func (a *App) init() {
 	}
 	a.applyTopMost()
 
+	a.startHotkeys()
 	h := a.cfg.Hotkeys
-	keys := map[HotkeyAction]string{ActAdd: h.Add, ActSub: h.Sub, ActCapture: h.Capture, ActToggle: h.Toggle, ActWindow: h.Window,
-		ActTranslate: h.TranslateToggle, ActTranslateRegion: h.TranslateRegion}
-	a.hk, a.hkErrors = StartHotkeys(keys, func(act HotkeyAction) {
-		a.mw.Synchronize(func() { a.onHotkey(act) })
-	})
-	a.hkLbl.SetText(fmt.Sprintf("Phím tắt:  %s +1  ·  %s −1  ·  %s chụp mẫu  ·  %s bật/tắt nhận diện  ·  %s ẩn/hiện app", h.Add, h.Sub, h.Capture, h.Toggle, h.Window))
+	a.hkLbl.SetText(fmt.Sprintf("%s +1 và học mẫu  ·  %s −1  ·  %s chụp mẫu  ·  %s bật/tắt nhận diện  ·  %s ẩn/hiện app  ·  %s bật/tắt dịch  ·  %s khoanh vùng dịch",
+		h.Add, h.Sub, h.Capture, h.Toggle, h.Window, h.TranslateToggle, h.TranslateRegion))
 	if len(a.hkErrors) > 0 {
 		a.setStatus("Cảnh báo phím tắt: " + strings.Join(a.hkErrors, "; "))
 	} else {
@@ -541,6 +596,7 @@ func (a *App) init() {
 		a.subtitle.Destroy()
 		a.server.Close()
 		a.sound.Close()
+		a.stopNarration()
 		a.saveConfig()
 	})
 
@@ -670,6 +726,10 @@ func (a *App) onHotkey(act HotkeyAction) {
 		a.editTranslateRegion()
 		return
 	}
+	if act == ActNarrate {
+		a.onNarrate()
+		return
+	}
 	if a.cur == nil {
 		return
 	}
@@ -712,16 +772,22 @@ func (a *App) refreshCount() {
 	}
 	a.countLbl.SetText(fmt.Sprint(a.cur.Deaths))
 	if a.cfg.ObsEnabled {
-		if err := a.store.WriteObs(a.cfg.ObsFormat, a.cur.Name, a.cur.Deaths); err != nil {
+		if err := writeAtomic(a.store.ObsPath(), []byte(TextFileLine(a.cfg, a.cur.Name, a.cur.Deaths))); err != nil {
 			a.setStatus("Không ghi được file OBS: " + err.Error())
 		}
 	}
-	text := FormatObs(a.cfg.ObsFormat, a.cur.Name, a.cur.Deaths)
-	if a.overlay != nil {
-		a.overlay.Text = text
-		a.overlay.Render()
+	if o := a.overlay; o != nil {
+		o.Text = fmt.Sprint(a.cur.Deaths)
+		o.Label = LabelTextFor(a.cfg, a.cur.Name)
+		o.LabelImg = nil
+		if a.cfg.LabelMode == LabelModeImage {
+			o.LabelImg = a.labelImg
+		}
+		o.LabelSize = a.cfg.LabelSize
+		o.Corner = a.cfg.LabelCorner
+		o.Render()
 	}
-	a.server.Set(StateFromConfig(a.cfg, text))
+	a.server.Set(StateFromConfig(a.cfg, a.cur.Name, a.cur.Deaths, a.labelImgVer))
 }
 
 func (a *App) resetCount() {
@@ -813,17 +879,18 @@ func (a *App) reloadTemplates() {
 func (a *App) refreshTemplateInfo() {
 	n := len(a.tmplFeats)
 	if n == 0 {
-		a.tmplInfo.SetText("Chưa có mẫu. OCR bắt được sẽ tự lưu; game có chữ chết khó đọc thì bấm " + a.cfg.Hotkeys.Add + " lần đầu.")
+		a.tmplInfo.SetText("Chưa có. OCR bắt được sẽ tự lưu, hoặc bấm " + a.cfg.Hotkeys.Add + " lúc chết.")
 		return
 	}
 	s := fmt.Sprintf("%d/%d mẫu.", n, MaxTemplates)
 	if ag := TemplateAgreement(a.tmplFeats); ag >= 0 {
-		s += fmt.Sprintf(" Các mẫu khớp nhau: %d%%", int(ag*100))
+		s += fmt.Sprintf(" Khớp nhau %d%%.", int(ag*100))
 		if ag < a.cur.Threshold {
-			s += " → vùng nhận diện còn rộng hoặc có mẫu chụp sai, hãy khoanh sát hơn / xóa mẫu lạ."
+			s += " Nên khoanh vùng sát hơn hoặc xóa mẫu lạ."
 		}
 	}
 	a.tmplInfo.SetText(s)
+	a.tmplInfo.SetToolTipText(s)
 }
 
 func (a *App) onTemplateSelected() {
@@ -1088,20 +1155,12 @@ func (a *App) refreshProfileList(sel int) {
 }
 
 func (a *App) loadProfile(p *Profile) {
-	if i := a.presetIndex(p.Preset); i >= 0 {
-		if k := UpgradeKeywords(p.Keywords, a.presets[i].Keywords); len(k) != len(p.Keywords) {
-			p.Keywords = k
-			a.store.SaveProfile(p)
-		}
-	}
 	a.cur = p
 	a.det = NewDetector(p.Threshold, time.Duration(p.CooldownSec*float64(time.Second)))
 	a.suppress = true
 	a.autoCB.SetChecked(p.AutoEnabled)
 	a.ocrCB.SetChecked(p.OcrEnabled)
-	a.hpCB.SetChecked(p.HPEnabled)
-	a.thrSlider.SetValue(int(p.Threshold*100 + 0.5))
-	a.thrLbl.SetText(fmt.Sprintf("%d%%", int(p.Threshold*100+0.5)))
+	a.thrNE.SetValue(float64(int(p.Threshold*100 + 0.5)))
 	a.cooldownNE.SetValue(p.CooldownSec)
 	a.suppress = false
 	a.cfg.CurrentProfile = p.ID
@@ -1112,8 +1171,6 @@ func (a *App) loadProfile(p *Profile) {
 	a.reloadTemplates()
 	a.ocrProven = false
 	a.refreshLangUI()
-	a.hpDet = NewHPDeath(p.HPFull)
-	a.refreshHPLabel()
 }
 
 func (a *App) onProfileChanged() {
@@ -1135,11 +1192,6 @@ func (a *App) addProfile() {
 	if err != nil {
 		walk.MsgBox(a.mw, "Thêm game", "Không tạo được: "+err.Error(), walk.MsgBoxIconWarning)
 		return
-	}
-	if i := FindPreset(a.presets, p.Name); i >= 0 {
-		p.Preset = a.presets[i].Game
-		p.Keywords = append([]string(nil), a.presets[i].Keywords...)
-		a.store.SaveProfile(p)
 	}
 	a.profiles = append(a.profiles, p)
 	a.refreshProfileList(len(a.profiles) - 1)
@@ -1241,15 +1293,10 @@ func (a *App) onAutoChanged() {
 }
 
 func (a *App) onThresholdChanged() {
-	if a.thrSlider == nil || a.thrLbl == nil {
+	if a.thrNE == nil || a.suppress || a.cur == nil {
 		return
 	}
-	v := a.thrSlider.Value()
-	a.thrLbl.SetText(fmt.Sprintf("%d%%", v))
-	if a.suppress || a.cur == nil {
-		return
-	}
-	a.cur.Threshold = float64(v) / 100
+	a.cur.Threshold = a.thrNE.Value() / 100
 	a.det.Threshold = a.cur.Threshold
 	a.store.SaveProfile(a.cur)
 	a.refreshTemplateInfo()
@@ -1279,15 +1326,6 @@ func (a *App) onMonitorChanged() {
 		a.refreshTranslateRegionLabel()
 		a.syncTranslateLoop()
 	}
-}
-
-func (a *App) onObsFormatChanged() {
-	if a.obsLE == nil {
-		return
-	}
-	a.cfg.ObsFormat = a.obsLE.Text()
-	a.saveConfig()
-	a.refreshCount()
 }
 
 func (a *App) onTopChanged() {
@@ -1392,7 +1430,7 @@ func (a *App) onOverlayEnabledChanged() {
 	a.refreshCount()
 	a.overlay.Show(a.cfg.OverlayEnabled)
 	if a.cfg.OverlayEnabled {
-		a.setStatus("Đã bật overlay. Bấm \"Chỉnh vị trí overlay\" để kéo nó tới chỗ muốn đặt.")
+		a.setStatus("Đã bật overlay. Bấm \"Kéo vị trí\" để kéo nó tới chỗ muốn đặt.")
 	}
 }
 
@@ -1449,25 +1487,13 @@ func (a *App) pickColor(outline bool) {
 	a.refreshCount()
 }
 
+// refreshSwatches shows the two colors in their buttons' tooltips.
 func (a *App) refreshSwatches() {
-	set := func(sw *walk.Composite, lbl *walk.Label, hex string) {
-		if sw == nil {
-			return
-		}
-		c := MustHex(hex, RGB{})
-		if br, err := walk.NewSolidColorBrush(walk.RGB(c.R, c.G, c.B)); err == nil {
-			sw.SetBackground(br)
-			a.swBrushes = append(a.swBrushes, br)
-		}
-		lbl.SetText(c.Hex())
+	if a.colorPB == nil || a.outlinePB == nil {
+		return
 	}
-	set(a.colorSw, a.colorLbl, a.cfg.TextColor)
-	set(a.outlineSw, a.outlineLbl, a.cfg.OutlineColor)
-	// keep only the two brushes in use
-	for len(a.swBrushes) > 2 {
-		a.swBrushes[0].Dispose()
-		a.swBrushes = a.swBrushes[1:]
-	}
+	a.colorPB.SetToolTipText("Màu chữ " + MustHex(a.cfg.TextColor, RGB{255, 255, 255}).Hex())
+	a.outlinePB.SetToolTipText("Màu viền " + MustHex(a.cfg.OutlineColor, RGB{}).Hex())
 }
 
 func (a *App) fontList() []string {
@@ -1491,7 +1517,7 @@ func (a *App) toggleOverlayEdit() {
 	}
 	if a.overlay.Editing() {
 		a.overlay.SetEditing(false)
-		a.editPosPB.SetText("Chỉnh vị trí overlay")
+		a.editPosPB.SetText("Kéo vị trí")
 		a.cfg.OverlayX, a.cfg.OverlayY, a.cfg.OverlayPosSet = a.overlay.X, a.overlay.Y, true
 		a.saveConfig()
 		a.setStatus("Đã lưu vị trí overlay.")
@@ -1502,8 +1528,8 @@ func (a *App) toggleOverlayEdit() {
 	}
 	a.overlay.SetEditing(true)
 	a.overlay.Show(true)
-	a.editPosPB.SetText("Xong, lưu vị trí")
-	a.setStatus("Kéo khung viền vàng tới vị trí bất kỳ trên màn hình, rồi bấm \"Xong, lưu vị trí\".")
+	a.editPosPB.SetText("Lưu vị trí")
+	a.setStatus("Kéo khung viền vàng tới vị trí bất kỳ trên màn hình, rồi bấm \"Lưu vị trí\".")
 }
 
 func (a *App) resetOverlayPos() {
@@ -1532,8 +1558,8 @@ func (a *App) loadSound() {
 			label = filepath.Base(path)
 		}
 	}
-	if a.soundLbl != nil {
-		a.soundLbl.SetText(label)
+	if a.soundLE != nil {
+		a.soundLE.SetText(label)
 	}
 }
 
@@ -1556,10 +1582,10 @@ func (a *App) testSound() {
 }
 
 func (a *App) onVolumeChanged() {
-	if a.volSlider == nil {
+	if a.volNE == nil {
 		return
 	}
-	a.cfg.SoundVolume = a.volSlider.Value()
+	a.cfg.SoundVolume = int(a.volNE.Value())
 	a.sound.SetVolume(a.cfg.SoundVolume)
 	a.saveConfig()
 }
@@ -1609,50 +1635,6 @@ func (a *App) onKeywordsChanged() {
 	a.setStatus(fmt.Sprintf("Đã lưu %d từ khóa cho \"%s\".", len(EffectiveKeywords(a.cur, a.cfg.Keywords)), a.cur.Name))
 }
 
-func (a *App) presetNames() []string {
-	a.presets = LoadPresets()
-	names := []string{"Chung (mọi game)"}
-	for _, p := range a.presets {
-		names = append(names, p.Game)
-	}
-	return names
-}
-
-// refreshKeywordsUI syncs the preset combo, keyword box and hint with the profile.
-func (a *App) refreshKeywordsUI() {
-	if a.cur == nil || a.presetCB == nil {
-		return
-	}
-	a.suppress = true
-	defer func() { a.suppress = false }()
-	i := a.presetIndex(a.cur.Preset)
-	a.presetCB.SetCurrentIndex(i + 1) // 0 = generic
-	a.kwLE.SetText(strings.Join(EffectiveKeywords(a.cur, a.cfg.Keywords), ", "))
-	if i >= 0 {
-		a.presetLbl.SetText(a.presets[i].HintText())
-	} else {
-		a.presetLbl.SetText("Cách nhau bằng dấu phẩy. Thêm * ở cuối để khớp phần đầu câu.")
-	}
-}
-
-func (a *App) onPresetChanged() {
-	if a.suppress || a.cur == nil || a.presetCB == nil {
-		return
-	}
-	i := a.presetCB.CurrentIndex() - 1
-	if i >= 0 && i < len(a.presets) {
-		a.cur.Preset = a.presets[i].Game
-		a.cur.Keywords = append([]string(nil), a.presets[i].Keywords...)
-	} else {
-		a.cur.Preset = ""
-		a.cur.Keywords = nil
-	}
-	a.store.SaveProfile(a.cur)
-	a.det.Reset()
-	a.refreshKeywordsUI()
-	a.setStatus("Đã áp dụng mẫu theo game.")
-}
-
 // ---------- OCR language ----------
 
 func (a *App) setOcrLanguages(langs []OcrLang) {
@@ -1698,82 +1680,4 @@ func (a *App) onLangChanged() {
 	a.store.SaveProfile(a.cur)
 	a.updateLoop()
 	a.setStatus("Đã đổi ngôn ngữ OCR cho game này.")
-}
-
-// ---------- health bar ----------
-
-func (a *App) refreshHPLabel() {
-	if a.cur == nil || a.hpZoneLbl == nil {
-		return
-	}
-	if !a.cur.HPColor.Valid() {
-		a.hpZoneLbl.SetText("Chưa khoanh")
-		a.hpLbl.SetText("--")
-		return
-	}
-	z := a.cur.HPZone
-	a.hpZoneLbl.SetText(fmt.Sprintf("x %d%%, y %d%%, %d×%d%% · màu %.0f°", int(z.X*100), int(z.Y*100), int(z.W*100), int(z.H*100), a.cur.HPColor.Hue))
-	if !a.cur.HPEnabled {
-		a.hpLbl.SetText("-- (đang tắt)")
-	}
-}
-
-func (a *App) onHPChanged() {
-	if a.suppress || a.cur == nil || a.hpCB == nil {
-		return
-	}
-	a.cur.HPEnabled = a.hpCB.Checked()
-	a.store.SaveProfile(a.cur)
-	if a.cur.HPEnabled && !a.cur.HPColor.Valid() {
-		a.setStatus("Bấm \"Khoanh thanh máu...\" lúc đang đầy máu để app học màu thanh máu.")
-	}
-	a.refreshHPLabel()
-	a.updateLoop()
-}
-
-// calibrateHP hides the app, grabs the game screen, then lets the user draw
-// around the (full) health bar; the bar color is learned from that frame.
-func (a *App) calibrateHP() {
-	if a.cur == nil {
-		return
-	}
-	mon := a.currentMonitor()
-	a.mw.SetVisible(false)
-	a.overlay.Show(false)
-	time.AfterFunc(500*time.Millisecond, func() {
-		a.mw.Synchronize(func() {
-			ow, oh := OcrSize(mon)
-			shot, err := CaptureMonitorScaled(mon, ow, oh)
-			a.mw.SetVisible(true)
-			a.overlay.Show(a.cfg.OverlayEnabled)
-			if err != nil {
-				a.setStatus("Không chụp được màn hình: " + err.Error())
-				return
-			}
-			init := a.cur.HPZone
-			if init.W <= 0 {
-				init = ROI{0.05, 0.05, 0.4, 0.15}
-			}
-			a.editRegionOn(shot, "Khoanh thanh máu - "+a.cur.Name,
-				"Kéo chuột khoanh THANH MÁU nhân vật (lúc đang đầy máu).\nHUD thường: khoanh sát thanh máu. Máu trên người nhân vật (Dead Space): khoanh rộng quanh nhân vật.",
-				init, false, func(r ROI) {
-					c, ok := LearnHPColor(shot, r)
-					if !ok {
-						walk.MsgBox(a.mw, "Thanh máu", "Không tìm thấy màu nổi bật trong vùng này.\nHãy khoanh lúc đầy máu, và khoanh sát thanh máu hơn.", walk.MsgBoxIconWarning)
-						return
-					}
-					a.cur.HPZone, a.cur.HPColor = r, c
-					a.cur.HPFull = MeasureHP(shot, r, c)
-					a.cur.HPEnabled = true
-					a.store.SaveProfile(a.cur)
-					a.hpDet = NewHPDeath(a.cur.HPFull)
-					a.suppress = true
-					a.hpCB.SetChecked(true)
-					a.suppress = false
-					a.refreshHPLabel()
-					a.updateLoop()
-					a.setStatus(fmt.Sprintf("Đã học màu thanh máu (%.0f°). App sẽ đếm khi máu về 0 rồi màn hình tối.", c.Hue))
-				})
-		})
-	})
 }

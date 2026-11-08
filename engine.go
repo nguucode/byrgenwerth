@@ -19,6 +19,7 @@ const (
 	ActWindow
 	ActTranslate
 	ActTranslateRegion
+	ActNarrate
 )
 
 const newProfileName = "Game mới"
@@ -36,7 +37,6 @@ type EngineUI interface {
 	sync(f func())
 	setStatus(s string)
 	simText(s string)
-	hpText(s string)
 	ocrText(s string)
 	setOcrLanguages(langs []OcrLang)
 	ownRects() []ROI
@@ -53,13 +53,12 @@ type EngineUI interface {
 	eraseSubtitle()
 }
 
-// Engine is the logic shared by the Windows and macOS apps.
+// Engine is the death count and translation logic, kept apart from the UI.
 type Engine struct {
 	ui       EngineUI
 	store    *Store
 	cfg      Config
 	cur      *Profile
-	presets  []Preset
 	monitors []Monitor
 
 	tmplFeats []Feature
@@ -75,7 +74,6 @@ type Engine struct {
 	ocrInitErr   string
 	recentOcr    []OcrFrame // the last ~10 s of OCR, written to the miss log on a manual +1
 
-	hpDet *HPDeath
 	// ocrProven: OCR has read this game's death text this session. From then on
 	// a template match alone does not count: templates of a dark death screen
 	// also match the dark respawn or a dimmed screenshot tool.
@@ -88,9 +86,6 @@ type Engine struct {
 
 type loopState struct {
 	enabled      bool
-	hp           bool
-	hpZone       ROI
-	hpColor      HPColor
 	ocr          bool
 	ocrLang      string
 	hasTemplates bool
@@ -101,8 +96,6 @@ type loopState struct {
 
 type frameResult struct {
 	gen     int
-	hpRaw   float64 // -1 when not measured
-	black   bool
 	langs   []OcrLang // set when the OCR engine was (re)created
 	small   *image.RGBA
 	feat    Feature
@@ -119,6 +112,7 @@ type translationState struct {
 	apiKey     string
 	translator *Translator
 	shown      string // the subtitle line on screen, "" when none
+	last       string // the newest translation, kept after the subtitle hides
 	latest     int    // the newest line sent for translation; older replies are dropped
 	picking    bool   // the region dialog is open
 	ctx        context.Context
@@ -196,25 +190,6 @@ func (a *Engine) onFrame(fr frameResult) {
 	if fr.langs != nil {
 		a.ui.setOcrLanguages(fr.langs)
 	}
-	if fr.hpRaw >= 0 && a.hpDet != nil {
-		ratio := a.hpDet.Ratio(fr.hpRaw)
-		if a.hpDet.Full > a.cur.HPFull*1.05 { // calibration grew: remember it
-			a.cur.HPFull = a.hpDet.Full
-			a.store.SaveProfile(a.cur)
-		}
-		switch {
-		case fr.black:
-			a.ui.hpText("-- (màn hình đen)")
-		case ratio < 0:
-			a.ui.hpText("-- (chưa thấy thanh máu)")
-		default:
-			a.ui.hpText(fmt.Sprintf("%d%%", int(ratio*100+0.5)))
-		}
-		if a.hpDet.Feed(ratio, fr.black, now) && a.det.Trigger(now) {
-			a.addDeath(1, "hp")
-			a.ui.setStatus(fmt.Sprintf("Tự đếm lúc %s (máu về 0 rồi màn hình tối). Đếm sai thì bấm %s.", now.Format("15:04:05"), a.cfg.Hotkeys.Sub))
-		}
-	}
 	var m OcrMatch
 	hit := false
 	if fr.ranOcr {
@@ -289,9 +264,7 @@ func (a *Engine) updateLoop() {
 		st.hasTemplates = len(a.tmplFeats) > 0
 		st.ocr = a.cur.OcrEnabled && a.ocrAvailable
 		st.ocrLang = a.cur.OcrLang
-		st.hp = a.cur.HPEnabled && a.cur.HPColor.Valid()
-		st.hpZone, st.hpColor = a.cur.HPZone, a.cur.HPColor
-		st.enabled = a.cur.AutoEnabled && (st.hasTemplates || st.ocr || st.hp)
+		st.enabled = a.cur.AutoEnabled && (st.hasTemplates || st.ocr)
 		st.roi = a.cur.ROI
 	}
 	if a.cfg.Monitor >= 0 && a.cfg.Monitor < len(a.monitors) {
@@ -343,15 +316,6 @@ func (a *Engine) addDeath(delta int, source string) {
 	a.store.SaveProfile(a.cur)
 	a.store.AppendHistory(time.Now(), a.cur.Name, delta, a.cur.Deaths, source)
 	a.ui.refreshCount()
-}
-
-func (a *Engine) presetIndex(name string) int {
-	for i, p := range a.presets {
-		if p.Game == name {
-			return i
-		}
-	}
-	return -1
 }
 
 func (a *Engine) hasTranslateRegion() bool { return a.cfg.TranslateROI.W > 0 }
@@ -440,6 +404,7 @@ func (a *Engine) onTranslated(request int, line string, tr *Translator, res Tran
 		return
 	}
 	a.ui.trDstText(res.Text)
+	a.translation.last = res.Text
 	a.showSubtitle(res.Text, "", false)
 	took := "lấy từ cache"
 	if !res.Cached {

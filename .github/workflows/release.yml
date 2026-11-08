@@ -1,6 +1,6 @@
 name: release
 
-# Build Byrgenwerth for Windows and macOS and publish a release, either by pushing a
+# Build Byrgenwerth for Windows and publish a release, either by pushing a
 # tag like v0.8.0 or from the Actions tab ("Run workflow", enter the version).
 on:
   push:
@@ -38,41 +38,3 @@ jobs:
           else
             gh release create "$VERSION" Byrgenwerth.exe --target "$GITHUB_SHA" --title "Byrgenwerth $VERSION" --generate-notes
           fi
-
-  macos:
-    needs: release
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-      - run: go test ./...
-      - name: Import signing certificate
-        env:
-          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
-          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
-        run: |
-          # An ad-hoc release would make every Mac user grant Screen Recording again.
-          if [ -z "$MAC_CERT_P12" ]; then
-            echo "::error::MAC_CERT_P12 is not set: run scripts/make-signing-cert.sh once"
-            exit 1
-          fi
-          kc="$RUNNER_TEMP/signing.keychain-db"
-          echo "$MAC_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security create-keychain -p ci "$kc"
-          security set-keychain-settings "$kc"
-          security unlock-keychain -p ci "$kc"
-          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci "$kc" >/dev/null
-          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
-          rm "$RUNNER_TEMP/cert.p12"
-          echo "MAC_SIGN_IDENTITY=Byrgenwerth Code Signing" >> "$GITHUB_ENV"
-      - name: Build and attach
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version || github.ref_name }}
-        run: |
-          scripts/build-mac.sh "${VERSION#v}"
-          codesign -dr - dist/Byrgenwerth.app 2>&1 | grep 'certificate leaf'
-          gh release upload "$VERSION" dist/Byrgenwerth-macos.zip

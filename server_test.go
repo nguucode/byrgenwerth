@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -26,7 +27,8 @@ func TestOverlayServer(t *testing.T) {
 	s2.Close()
 
 	c := DefaultConfig()
-	s.Set(StateFromConfig(c, "Deaths: 7"))
+	c.LabelText = "{game} deaths"
+	s.Set(StateFromConfig(c, "Elden Ring", 7, 1))
 	r, err := http.Get(s.URL() + "state")
 	if err != nil {
 		t.Fatal(err)
@@ -34,14 +36,15 @@ func TestOverlayServer(t *testing.T) {
 	var st OverlayState
 	json.NewDecoder(r.Body).Decode(&st)
 	r.Body.Close()
-	if st.Text != "Deaths: 7" || st.Color != "#FFFFFF" || !st.Outline || st.Version != 1 {
+	if st.Count != "7" || st.Label != "Elden Ring deaths" || st.LabelImg != "" || st.Corner != CornerTL ||
+		st.Color != "#FFFFFF" || !st.Outline || st.Version != 1 {
 		t.Fatalf("%+v", st)
 	}
 	r, _ = http.Get(s.URL())
 	b, _ := io.ReadAll(r.Body)
 	r.Body.Close()
 	// fill must paint above the outline layer
-	if !strings.Contains(string(b), "#f{position:relative;z-index:1}") || !strings.Contains(string(b), "#o{position:absolute;z-index:0") {
+	if !strings.Contains(string(b), ".t .f{position:relative;z-index:1}") || !strings.Contains(string(b), ".t .o{position:absolute;z-index:0") {
 		t.Fatal("outline must be under the fill")
 	}
 	if !strings.Contains(string(b), "fetch('/state'") || !strings.Contains(r.Header.Get("Content-Type"), "text/html") {
@@ -50,31 +53,33 @@ func TestOverlayServer(t *testing.T) {
 	if r, _ := http.Get(s.URL() + "nope"); r.StatusCode != 404 {
 		t.Fatal("expected 404")
 	}
+	if r, _ := http.Get(s.URL() + "label"); r.StatusCode != 404 {
+		t.Fatal("no picture yet: expected 404")
+	}
 }
 
-func TestRequireTokenKeepsOtherPagesOut(t *testing.T) {
-	h := RequireToken("secret", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusTeapot) })
-	cases := []struct {
-		name, method, url, host, header string
-		want                            int
-	}{
-		{"header", "POST", "/api", "127.0.0.1:17321", "secret", http.StatusTeapot},
-		{"query on GET, for images", "GET", "/api?t=secret", "127.0.0.1:17321", "", http.StatusTeapot},
-		{"query on POST is not enough", "POST", "/api?t=secret", "127.0.0.1:17321", "", http.StatusForbidden},
-		{"no token", "POST", "/api", "127.0.0.1:17321", "", http.StatusForbidden},
-		{"wrong token", "POST", "/api", "127.0.0.1:17321", "nope", http.StatusForbidden},
-		{"DNS rebinding", "POST", "/api", "evil.example:17321", "secret", http.StatusForbidden},
+func TestOverlayServerLabelPicture(t *testing.T) {
+	s, err := StartOverlayServer(17341)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, c := range cases {
-		r := httptest.NewRequest(c.method, c.url, nil)
-		r.Host = c.host
-		if c.header != "" {
-			r.Header.Set("X-Token", c.header)
-		}
-		w := httptest.NewRecorder()
-		h(w, r)
-		if w.Code != c.want {
-			t.Errorf("%s: got %d", c.name, w.Code)
-		}
+	defer s.Close()
+	p := filepath.Join(t.TempDir(), "label.svg")
+	os.WriteFile(p, []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"/>`), 0o644)
+	s.SetLabelImage(p)
+	c := DefaultConfig()
+	c.LabelMode, c.LabelImage = LabelModeImage, "label.svg"
+	st := StateFromConfig(c, "", 3, 4)
+	if st.LabelImg != "/label?v=4" || st.Label != "" {
+		t.Fatalf("%+v", st)
+	}
+	r, err := http.Get(s.URL() + "label?v=4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := io.ReadAll(r.Body)
+	r.Body.Close()
+	if r.Header.Get("Content-Type") != "image/svg+xml" || !strings.Contains(string(b), "<svg") {
+		t.Fatalf("%s %s", r.Header.Get("Content-Type"), b)
 	}
 }

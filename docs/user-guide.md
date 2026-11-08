@@ -8,14 +8,15 @@ The app's interface is in Vietnamese. This guide gives each label in Vietnamese 
 
 1. [Install](#1-install)
 2. [Main window](#2-main-window)
-3. [Add a game](#3-add-a-game)
-4. [Nhận diện tab (detection)](#4-nhận-diện-tab-detection)
-5. [Hiển thị tab (display: overlay and OBS)](#5-hiển-thị-tab-display-overlay-and-obs)
-6. [Cài đặt tab (settings: sound and data)](#6-cài-đặt-tab-settings-sound-and-data)
+3. [Nhận diện tab (detection)](#3-nhận-diện-tab-detection)
+4. [Hiển thị tab (how the count looks)](#4-hiển-thị-tab-how-the-count-looks)
+5. [Overlay/OBS tab](#5-overlayobs-tab)
+6. [Cài đặt tab (settings)](#6-cài-đặt-tab-settings)
 7. [Hotkeys](#7-hotkeys)
 8. [Where data is stored](#8-where-data-is-stored)
 9. [Troubleshooting](#9-troubleshooting)
-10. [Translate tab: real-time dialogue translation](#10-translate-tab-real-time-dialogue-translation)
+10. [Translate: real-time dialogue translation](#10-translate-real-time-dialogue-translation)
+11. [Thuyết minh: Vietnamese narration](#11-thuyết-minh-vietnamese-narration)
 
 ---
 
@@ -29,67 +30,32 @@ irm https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.ps1 | ie
 
 - **First time** it asks for an install folder; press Enter for `%LOCALAPPDATA%\Programs\Byrgenwerth`. If the folder you type is not named `Byrgenwerth`, a `Byrgenwerth` folder is created inside it. The app and all its data live there.
 - It adds **Byrgenwerth** to the Start menu and to Windows *Apps & features*, then starts the app.
-- **Update**: run the same command again. It closes the app, replaces the exe in the same folder and keeps your data. An existing Death Counter install is renamed to Byrgenwerth, with its counts and settings. In OBS, update the path of the text file if you use it.
-- On first launch Windows may ask for **network permission**: the app serves a local page on `127.0.0.1` for OBS. That page stays on your PC. Allow it. Only the Translate tab goes to the internet, and only while it is on.
+- **Update**: run the same command again. It closes the app, replaces the exe in the same folder and keeps your data.
+- On first launch Windows may ask for **network permission**: the app serves a local page on `127.0.0.1` for OBS. That page stays on your PC. Allow it.
 
 Manual install: download `Byrgenwerth.exe` from [Releases](https://github.com/nguucode/byrgenwerth/releases/latest) into a folder you can write to (not `C:\Program Files`). SmartScreen may warn because the exe is not code-signed: *More info → Run anyway*. Updates are then manual too.
 
 Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, Windows blocks screen capture and the overlay is hidden.
 
-### macOS
-
-macOS 14 or newer, Apple Silicon or Intel. It has the same two tools as Windows. Run this in Terminal:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.sh | sh
-```
-
-The app goes to `~/Applications`, with its data in `~/Library/Application Support/Byrgenwerth`. Run the command again to update. It has no Dock icon: use **Byrgenwerth** in the menu bar to open the window or quit.
-
-- Allow **Screen Recording** when macOS asks, then open the app again. From v0.11.2 on, updates keep the permission. Updating from an older version asks once more: those builds had a signature that changed with every update, and the installer clears their stale permission. If Settings shows Byrgenwerth switched on but the app still says it has no permission, run `tccutil reset ScreenCapture com.nguucode.byrgenwerth` in Terminal, open the app, allow, then open it again.
-- The API key is kept in the Keychain.
-- F keys need **fn** on most Mac keyboards, unless *Use F1, F2 as standard function keys* is on. F11 is also the default Show Desktop shortcut, so **Chụp mẫu ngay** may be the easier way to capture a template. To change hotkeys, edit `hotkeys` in `config.json`.
-- The Mac version has not been tried with a game yet. Most Windows games reach a Mac through a translation layer, so expect differences in what can be read.
+Byrgenwerth runs on Windows 10 and 11 only. The macOS version was removed in v0.12.0.
 
 ## 2. Main window
 
-The header shows the app name and version. **Death count** and **Translate** switch between the two tools. The items below belong to Death count; see [section 11](#11-translate-tab-real-time-dialogue-translation) for Translate.
-
-- **Game**: the game you are playing. Each game has its own count, templates and keywords.
-- **Số lần chết** (deaths): the big red number, with **+1**, **−1** and **Reset** buttons.
-- **3 tabs**: Nhận diện (detection), Hiển thị (display), Cài đặt (settings).
-- **Cửa sổ app luôn nằm trên**: keep the app window always on top. When a full-screen game (Borderless included) comes to the front, the app window minimizes itself; F7 brings it back.
+- **Death count** / **Translate** switch between the two tools. **Luôn trên** keeps the app window on top. When a full-screen game (Borderless included) comes to the front, the app window minimizes itself; F7 brings it back.
+- **Game**: the game you are playing. Each game has its own count, templates and keywords. **Thêm game** adds one. Rename and delete are in the Cài đặt tab.
+- The big red number is the death count, with **+1**, **−1** and **Reset**.
+- **4 tabs**: Nhận diện (detection), Hiển thị (look), Overlay/OBS, Cài đặt (settings).
 - The last line is the **status**: what the app just did, or any error.
 
-## 3. Add a game
+Hover over a field or button for a short explanation.
 
-1. Click **+ Thêm** (add), type the game name, OK.
-2. If the name matches one of the 100 presets (close is fine: "elden ring", "wuchang"), its death keywords are loaded automatically.
-3. **Đổi tên** (rename) / **Xóa** (delete). Deleting a game also deletes its count and templates.
-
-### Supported games
-
-Any Windows game can be counted: if OCR doesn't catch the death screen, press **F9** once to teach a template, or use [the health-bar mode](#games-without-a-death-screen-fade-to-black-reload-checkpoint). What differs between games is how much works out of the box. "Verified" below means the death text was found in wikis and screenshots ([sources](death-screens-top100.csv)); not every game has been tested in the app yet.
-
-**Counted automatically, readable text (27):** Elden Ring, Elden Ring Nightreign, Dark Souls III, Dark Souls Remastered, Bloodborne, Demon's Souls (2020), Wuchang: Fallen Feathers, Stellar Blade, The First Berserker: Khazan, Diablo IV, The Witcher 3: Wild Hunt, Fortnite, Apex Legends, PUBG: Battlegrounds, Overwatch 2, Escape from Tarkov, Team Fortress 2, Rust, DayZ, Left 4 Dead 2, Resident Evil 4 (2023 remake), Assassin's Creed Shadows, Metal Gear Solid Delta: Snake Eater, Minecraft, Subnautica, Lethal Company, Risk of Rain 2.
-Some only count part of the deaths: Apex Legends and Risk of Rain 2 only when the whole squad or run is lost; PUBG and Escape from Tarkov on the end-of-match screen, not the moment you die; Assassin's Creed Shadows also counts failed missions (DESYNCHRONIZED).
-
-**Counted automatically, stylized text: OCR may miss it, press F9 once (10):** Sekiro: Shadows Die Twice (needs Japanese OCR), Hunt: Showdown 1896, Grand Theft Auto V, Red Dead Redemption 2, Resident Evil 2 (2019 remake), Hades, Terraria, Cuphead, Balatro, Fall Guys. Balatro and Fall Guys count lost runs and eliminations, not deaths.
-
-**Preset but death text not verified, generic keywords (54):** Lies of P, Black Myth: Wukong, Lords of the Fallen (2023), Nioh 2, Mortal Shell, Hollow Knight: Silksong, Monster Hunter Wilds, Monster Hunter: World, Dragon's Dogma 2, Baldur's Gate 3, Path of Exile 2, Cyberpunk 2077, Counter-Strike 2, Valorant, Call of Duty: Warzone, Call of Duty: Black Ops 6, Call of Duty: Black Ops 7, Battlefield 6, Marvel Rivals, Tom Clancy's Rainbow Six Siege, ARC Raiders, Helldivers 2, The Finals, Destiny 2, Deadlock, Delta Force, Deep Rock Galactic, Resident Evil Village, Silent Hill 2 (2024 remake), Dead Space (2023 remake), The Last of Us Part II, God of War Ragnarök, Ghost of Tsushima, Ghost of Yōtei, Marvel's Spider-Man 2, Horizon Forbidden West, Assassin's Creed Valhalla, Kingdom Come: Deliverance II, Death Stranding 2: On the Beach, Ninja Gaiden 2 Black, Devil May Cry 5, Hades II, Dead Cells, The Binding of Isaac: Rebirth, Valheim, 7 Days to Die, Project Zomboid, Palworld, Enshrouded, R.E.P.O., PEAK, Vampire Survivors, Slay the Spire, League of Legends.
-These may count on their own if the death screen matches a generic keyword; expect to press F9 once.
-
-**No death text, or text too small: F9 templates or health-bar mode (9):** Hollow Knight, The Last of Us Part I, Phasmophobia, Celeste, Super Meat Boy, Geometry Dash (no death text); Don't Starve Together, Dead by Daylight, Dota 2 (text too small).
-
-For every game: Windows only, and the game must run **Borderless** or **Windowed**. Console games (e.g. Bloodborne, Demon's Souls) only work when the picture is shown in a window on the PC, such as PS Remote Play or a capture-card preview.
-
-## 4. Nhận diện tab (detection)
+## 3. Nhận diện tab (detection)
 
 ### How deaths are detected
 
 The app captures the screen about twice per second and uses two methods together:
 
-1. **OCR**: looks for keywords like "YOU DIED", "WASTED", "DEAD". The text must be **large** and **near the center**; small menu text, item names and corner HUD are ignored.
+1. **OCR**: reads the screen with the text recognition built into Windows and looks for keywords like "YOU DIED", "WASTED", "DEAD". The text must be **large** and **near the center**; small menu text, item names and corner HUD are ignored. This works the same way for every game: there are no per-game presets.
 2. **Templates**: compares the screen with saved death-screen images. Used for stylized text or games with no text. Once OCR has read the death text in this session, a template match alone no longer counts: a dark death-screen template also matches dark respawns and dimmed screenshot tools.
 
 Each death screen is counted **once**, however long it stays.
@@ -98,90 +64,82 @@ Each death screen is counted **once**, however long it stays.
 
 | Label | Meaning |
 |---|---|
-| Bật tự nhận diện | Enable automatic detection. Turn off to count manually (F9/F10). |
-| Đọc chữ bằng OCR | Enable OCR. |
-| Trạng thái OCR | What OCR currently reads, e.g. `Thấy "DEAD" (cao 4.6%) → KHỚP` (found, matched). Check this first when a death is missed. |
-| Ngôn ngữ game | OCR language. "Theo Windows" (system default) is fine for English games. See [troubleshooting](#ocr-cannot-read-a-game-in-chinesejapanesevietnamese) for others. |
-| Mẫu theo game | Game preset. "Chung (mọi game)" = generic list. The gray line below says whether the preset is verified. |
-| Từ khóa | Keywords, comma separated. End with `*` to match the start of a sentence, e.g. `You were slain by *`. |
-| Độ giống | Live similarity between the screen and templates. |
-| Ngưỡng | Threshold. Lower it (70%) if deaths are missed, raise it (90%) if it miscounts. |
-| Cooldown | Seconds to wait after a count before another one. 8–10 s for fast-respawn games. |
-| Màn hình game | Which monitor runs the game. |
-| Vùng nhận diện | Region used for template matching. **Draw it tightly around the death text** for best accuracy. Set automatically on the first OCR hit. |
-| Ảnh mẫu | Saved templates (max 10). Delete wrong ones to avoid false counts. |
-
-### Games without a death screen (fade to black, reload checkpoint)
-
-Some games just fade to black and reload. Use the **Máu nhân vật** (character health) section:
-
-1. In game, at **full health**, click **Khoanh thanh máu...** (draw health bar). The app hides for half a second to capture the game screen.
-2. Draw the region:
-   - HUD health bar: draw tightly around it.
-   - Health shown on the character (e.g. Isaac's spine in Dead Space): draw a **wide** region around where the character usually stands.
-3. The app learns the bar's color. **Máu hiện tại** shows current health %.
-
-A death is counted when **health drops to ~0%, then within 8 seconds the screen goes almost fully black for at least 1 second**. Loading screens while you still have health are ignored.
-
-Limits: instant deaths where the bar has no time to drop (falling) may be missed: press F9. Walking into a black loading zone at very low health may count wrongly: press F10.
+| Tự nhận diện | Enable automatic detection. Turn off to count manually (F9/F10). |
+| Đọc chữ (OCR) | Enable OCR. |
+| Màn hình | Which monitor runs the game. |
+| Ngôn ngữ | OCR language. "Theo Windows" (system default) is fine for English games. See [troubleshooting](#ocr-cannot-read-a-game-in-chinesejapanesevietnamese) for others. |
+| Từ khóa | Keywords, comma separated. End with `*` to match the start of a sentence, e.g. `You were slain by *`. Clear the box to go back to the generic list. |
+| Ngưỡng | Template threshold, **70%** by default. Lower it if deaths are missed, raise it (85–90%) if it miscounts. |
+| Cooldown | Seconds to wait after a count before another one, **10 s** by default. |
+| Vùng | Region used for template matching. **Draw it tightly around the death text** (Khoanh...) for best accuracy. Set automatically on the first OCR hit. |
+| Ảnh mẫu | Saved templates (max 10). **Chụp mẫu** saves the screen now, **Xóa mẫu** deletes the selected one. Delete wrong ones to avoid false counts. |
+| OCR | What OCR currently reads, e.g. `Thấy "DEAD" (cao 4.6%) → KHỚP` (found, matched). Check this first when a death is missed. |
+| Độ giống | Live similarity between the screen and the templates. |
 
 ### A game is not counted automatically
 
-1. Watch **Trạng thái OCR** while the death screen is visible.
-2. If OCR can't read it (stylized text, kanji, no text): press **F9** on the death screen. The app adds 1 and saves a template.
-3. Click **Khoanh vùng...** (draw region) and draw tightly around the death text or icon.
+1. Watch the **OCR** line while the death screen is visible.
+2. If OCR can't read it (stylized text, kanji, no text at all): press **F9** on the death screen. The app adds 1 and saves a template.
+3. Click **Khoanh...** next to **Vùng** and draw tightly around the death text or icon.
 4. Next deaths are counted automatically.
 
-## 5. Hiển thị tab (display: overlay and OBS)
+Games that only fade to black without any death screen can't be counted on their own: press F9 when you die.
 
-### Content
+## 4. Hiển thị tab (how the count looks)
 
-**Định dạng** (format): `{count}` = deaths, `{game}` = game name. Example: `{game} · Deaths: {count}`.
+### Label (Nhãn)
 
-### Text style (shared by overlay and OBS)
+The label is shown with the number, on the overlay and in OBS.
 
-Font (any installed font, or type a name), size, bold, text color, outline (on/off, width) and outline color.
+| Label | Meaning |
+|---|---|
+| Kiểu | **Chữ** (a word), **Hình** (a PNG or SVG picture) or **Không có nhãn** (number only). |
+| Chữ | The word, e.g. `Deaths`. `{game}` is replaced by the game name. |
+| Hình | **Chọn...** picks a `.png` or `.svg`. It is copied into the data folder, so the original can move. |
+| Cỡ | Size of the label in px: the text size, or the picture's height. |
+| Vị trí | Which corner around the number the label sits in: top left, top right, bottom left or bottom right. "Top" puts it above the number, "bottom" below; "left"/"right" lines it up with that edge of the number. |
+
+### Text style (Kiểu chữ)
+
+Font (any installed font, or type a name), size of the number, bold, outline width (on/off), and the two colors: **Chữ** (text) and **Viền** (outline). Hover a color button to see its value.
+
+## 5. Overlay/OBS tab
 
 ### On-screen overlay
 
-1. Tick **Hiện overlay nổi trên game** (show overlay).
-2. Click **Chỉnh vị trí overlay** (move overlay): it shows a yellow frame; drag it anywhere.
-3. Click **Xong, lưu vị trí** (done). Normally the overlay is click-through.
+1. Tick **Hiện** (show).
+2. Click **Kéo vị trí** (move): a yellow frame appears; drag it anywhere.
+3. Click **Lưu vị trí** (save). Normally the overlay is click-through. **Đặt lại** puts it back in the top-left corner.
 
 OBS only records this overlay with **Display Capture**. With Game Capture, use the Browser Source below.
 
 ### OBS (Browser Source recommended)
 
-1. Click **Copy** next to Browser Source (`http://127.0.0.1:17321/`).
-2. In OBS: *Sources → + → Browser*, paste into **URL**, **Width 1200**, **Height 250**.
-3. Position it. Transparent background, your text style, updates live.
+1. Click **Copy** next to **Browser** (`http://127.0.0.1:17321/`).
+2. In OBS: *Sources → + → Browser*, paste into **URL**, **Width 1200**, **Height 400**.
+3. Position it. Transparent background, your text style and label, updates live.
 
-Legacy option: tick **Ghi thêm file text** and use OBS *Text (GDI+) → Read from file*. This does not keep the style.
+Legacy option: tick **Ghi file** and use OBS *Text (GDI+) → Read from file* with the path from its **Copy** button. The file holds the label word and the number, without style or picture.
 
-## 6. Cài đặt tab (settings: sound and data)
+## 6. Cài đặt tab (settings)
 
-### Sound
+### Sound on every +1
 
-No sound file is bundled.
+No sound file is bundled. **Chọn...** picks your own `.mp3` or `.wav`, **Âm lượng** sets the volume (mp3 only), **Bật** turns it on, **Nghe thử** plays it, **Bỏ file** removes it. It plays on every +1 (automatic, F9 or button), not on −1.
 
-1. **Chọn file...**: pick your own `.mp3` or `.wav`.
-2. Tick **Phát âm thanh mỗi lần đếm +1** (play on every +1).
-3. **Âm lượng** (volume, mp3 only), **Nghe thử** (test).
+### Game đang chọn (current game)
 
-Plays on every +1 (automatic, F9 or button), not on −1. **Bỏ âm thanh** removes it.
+**Đổi tên** renames the current game. **Xóa game** deletes it with its count and templates.
 
-### Data folder
+### Hotkeys and data
 
-Data lives in `ByrgenwerthData` next to `Byrgenwerth.exe`, so the app folder holds everything. **Mở** (open) shows it in Explorer.
-
-- Coming from Death Counter, `DeathCounterData` is renamed on the first launch. Coming from 0.8 or older, where data was in `%APPDATA%\DeathCounter` or a folder you picked: the first launch copies it over once. The old copy stays until you uninstall.
-- If the app folder is not writable, data goes to `%APPDATA%\Byrgenwerth` for now and the app tells you. Reinstall into a folder you own.
+The hotkey list is shown here (see [section 7](#7-hotkeys)). **Thư mục** opens the data folder.
 
 ### Uninstall
 
-Click **Gỡ Byrgenwerth...** (uninstall) in this tab, or use Windows *Settings → Apps → Byrgenwerth → Uninstall*. After you confirm, it deletes:
+Click **Gỡ app...**, or use Windows *Settings → Apps → Byrgenwerth → Uninstall*. After you confirm, it deletes:
 
-- all data, including your API key: `ByrgenwerthData`, `%APPDATA%\Byrgenwerth`, plus `%APPDATA%\DeathCounter` and the folder you picked in older versions (only the app's own files there, nothing else),
+- all data, including your API key, label picture and downloaded voices: `ByrgenwerthData`, `%APPDATA%\Byrgenwerth`, plus `%APPDATA%\DeathCounter` and the folder you picked in older versions (only the app's own files there, nothing else),
 - `Byrgenwerth.exe`, and the install folder when it is left empty,
 - the Start menu shortcut and the *Apps & features* entry.
 
@@ -198,19 +156,21 @@ It cannot be undone. To keep your counts, copy `ByrgenwerthData` somewhere first
 | F7 | Hide/show the app window (also brings it back after it minimized for a game). Detection, overlay and OBS keep running. |
 | Ctrl+Alt+T | Turn translation on or off. |
 | Ctrl+Alt+R | Draw the dialogue region for translation again. |
+| Ctrl+Alt+V | Read the translation aloud. Change it in Translate → Thuyết minh → **Gán...**. |
 
-Hotkeys work while in game; the game won't receive these keys.
-To change them, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and restart the app.
+Hotkeys work while in game; the game won't receive these keys. To change the others, edit `hotkeys` in `config.json` (e.g. `"add": "Ctrl+F9"`) and restart the app.
 
 ## 8. Where data is stored
 
-In `ByrgenwerthData` next to `Byrgenwerth.exe` (button **Mở** in the Cài đặt tab):
+In `ByrgenwerthData` next to `Byrgenwerth.exe` (button **Thư mục** in the Cài đặt tab):
 
 | File | Content |
 |---|---|
-| `config.json` | Global settings: hotkeys, text style, overlay positions... |
+| `config.json` | Global settings: hotkeys, text style, label, overlay position, narration... |
 | `profiles\<game>\profile.json` | Count and keywords per game. |
 | `profiles\<game>\templates\` | Death-screen templates. |
+| `label.png` / `label.svg` | The label picture, if you chose one. |
+| `piper\` | The narration engine and voices, once downloaded. |
 | `history.csv` | Log of every +1/−1, opens in Excel. |
 | `obs_deaths.txt` | Text file for OBS (if enabled). |
 | `ocr-debug.log` | Every OCR read while a full-screen game is in front (text, position, height), and every count. Moved to `ocr-debug.old.log` at 4 MB. Send it with a bug report. |
@@ -223,38 +183,38 @@ Back up by copying the whole folder.
 
 ### A death is not counted
 - Press F9 right away: it counts the death and writes what OCR read to `ocr-misses.log` in the data folder. That file shows why the death was missed.
-- Check **Trạng thái OCR** during the death screen.
-  - Nothing or garbage read: stylized text. Use F9 + draw region (section 4).
+- Check the **OCR** line during the death screen.
+  - Nothing or garbage read: stylized text. Use F9 + draw region (section 3).
   - Correct text but "không phải từ khóa" (not a keyword): add it to **Từ khóa**.
 - Exclusive fullscreen: switch to Borderless.
-- Multiple monitors: check **Màn hình game**.
+- Multiple monitors: check **Màn hình**.
 
 ### Wrong counts
 - Press F10.
-- Delete wrong templates, raise **Ngưỡng**, draw **Vùng nhận diện** tighter.
+- Delete wrong templates, raise **Ngưỡng**, draw **Vùng** tighter.
 
 ### Hotkeys don't work
-The status line says "Cảnh báo phím tắt" (hotkey warning) when another program owns the key. Change it in `config.json`.
+The status line says "Cảnh báo phím tắt" (hotkey warning) when another program owns the key. Change it in `config.json`, or for narration with **Gán...**.
 
 ### Overlay not visible in game
 The game is in exclusive fullscreen. Switch to Borderless.
 
 ### OCR cannot read a game in Chinese/Japanese/Vietnamese
 1. Windows *Settings → Time & language → Language & region → Add a language*, add the game's language.
-2. Restart the app and pick it in **Ngôn ngữ game** (Nhận diện tab).
-3. Add that language's death text to **Từ khóa**. Accents don't matter: "BẠN ĐÃ CHẾT" also matches "BAN DA CHET". Presets of games that show "YOU DIED" already include the Vietnamese fan translation "BẠN ĐÃ CHẾT".
+2. Restart the app and pick it in **Ngôn ngữ** (Nhận diện tab).
+3. Add that language's death text to **Từ khóa**. Accents don't matter: "BẠN ĐÃ CHẾT" also matches "BAN DA CHET".
 
 ### OBS shows nothing
 - The app must be running.
 - The port may differ from 17321 if it was busy; always copy the URL from the app.
 
-## 10. Translate tab: real-time dialogue translation
+## 10. Translate: real-time dialogue translation
 
-The app reads the dialogue region of your game and shows a Vietnamese translation in a box right next to it. English to Vietnamese only.
+The **Dịch** tab reads the dialogue region of your game and shows a Vietnamese translation in a box right next to it. English to Vietnamese only.
 
-1. Get an API key at [console.anthropic.com](https://console.anthropic.com) and paste it into **API key**. You pay Anthropic for what you use; **Chi phí ước tính** (estimated cost) adds up from token counts and list prices. It restarts when you change the key or the game.
-2. Open the game, press **Ctrl+Alt+R** and drag over the dialogue box. A tighter region costs less and misreads less. Pressing the shortcut in the game also works; so does **Khoanh vùng...** in the tab.
-3. Tick **Bật dịch** (translate on) or press **Ctrl+Alt+T**. It always starts off, so nothing is sent until you turn it on.
+1. Get an API key at [console.anthropic.com](https://console.anthropic.com) and paste it into **API key**. You pay Anthropic for what you use; the estimated cost adds up from token counts and list prices. It restarts when you change the key or the game.
+2. Open the game, press **Ctrl+Alt+R** and drag over the dialogue box. A tighter region costs less and misreads less. **Khoanh...** in the tab does the same.
+3. Tick **Bật dịch Anh → Việt** or press **Ctrl+Alt+T**. It always starts off, so nothing is sent until you turn it on.
 
 Good to know:
 
@@ -264,4 +224,20 @@ Good to know:
 - On an error the box shows the English line and the reason. More than 500 characters in the region is refused: draw a tighter region.
 - English OCR must be installed in Windows: *Settings → Time & language → Language & region*.
 - The game must run **Borderless** or **Windowed**, or the box cannot show over it.
-- Translation is new and has not been tried on a real game yet. Expect rough edges.
+- Translation has not been tried on many games yet. Expect rough edges.
+
+## 11. Thuyết minh: Vietnamese narration
+
+The **Thuyết minh** tab reads the Vietnamese translation aloud when you press a key or a gamepad button.
+
+1. Pick a voice in **Giọng**: **Nữ** (female) or **Nam** (male). Click **Tải** (download) once. The app downloads [Piper](https://github.com/rhasspy/piper) (22 MB) and the voice (female 63 MB, male 28 MB), checks each file against a fixed hash, and keeps them in `ByrgenwerthData\piper`.
+2. **Nghe thử** plays a sample. **Tốc độ** changes the speed (0 = normal, +50 = faster, −50 = slower), **Âm lượng** the volume.
+3. Bind a key with **Gán...** next to **Bàn phím** (default **Ctrl+Alt+V**), a gamepad combination with **Gán...** next to **Tay cầm**: hold the buttons together and let go.
+4. In game, press the key or the buttons: the translation on screen (or the last one) is read aloud. Press again to stop. **Đọc dịch** does the same from the app.
+
+Good to know:
+
+- Narration runs **on your PC**. After the download it needs no internet and sends nothing anywhere.
+- The voices are Piper's free Vietnamese voices: female `vais1000` (medium quality), male one speaker of `vivos` (lower quality). They sound synthetic.
+- Gamepads: Xbox controllers and anything shown to Windows as one (Steam Input, DS4Windows). The game also receives the buttons, so pick a combination it does not use, such as **LB+RB+Y**.
+- Reading needs a translation, so turn on **Bật dịch** first.

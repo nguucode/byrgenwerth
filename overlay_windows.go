@@ -3,6 +3,7 @@
 package main
 
 import (
+	"image"
 	"syscall"
 	"unsafe"
 
@@ -45,7 +46,11 @@ var (
 type Overlay struct {
 	hwnd         win.HWND
 	X, Y         int32
-	Text         string
+	Text         string // the count
+	Label        string // word shown with the count, "" for none
+	LabelImg     *image.RGBA
+	LabelSize    int
+	Corner       string // where the label sits around the count
 	FontSize     int
 	FontFamily   string
 	Bold         bool
@@ -139,7 +144,8 @@ func (o *Overlay) Destroy() {
 	win.DestroyWindow(o.hwnd)
 }
 
-// Render draws the text into a 32-bit DIB and pushes it with UpdateLayeredWindow.
+// Render draws the count and its label into a 32-bit DIB and pushes it with
+// UpdateLayeredWindow.
 func (o *Overlay) Render() {
 	if o == nil || o.hwnd == 0 {
 		return
@@ -148,30 +154,45 @@ func (o *Overlay) Render() {
 		o.renderSubtitle()
 		return
 	}
-	text := o.Text
-	if text == "" {
-		text = " "
+	count := o.Text
+	if count == "" {
+		count = " "
 	}
+	cpx, cw, ch := o.textLayer(count, o.FontSize)
+	var lpx []byte
+	var lw, lh int
+	switch {
+	case o.LabelImg != nil:
+		lpx, lw, lh = PremulBGRA(o.LabelImg), o.LabelImg.Bounds().Dx(), o.LabelImg.Bounds().Dy()
+	case o.Label != "":
+		lpx, lw, lh = o.textLayer(o.Label, o.LabelSize)
+	}
+	gap := max(o.FontSize/10, 2)
+	w, h, cb, lb := LabelLayout(cw, ch, lw, lh, o.Corner, gap)
+	pad := 0
+	if o.editing {
+		pad = 8
+	}
+	w, h = w+2*pad, h+2*pad
+	buf := make([]byte, w*h*4)
+	BlitPremul(buf, w, h, cpx, cw, ch, cb.X+pad, cb.Y+pad)
+	if lpx != nil {
+		BlitPremul(buf, w, h, lpx, lw, lh, lb.X+pad, lb.Y+pad)
+	}
+	if o.editing {
+		AddEditBackground(buf, w, h)
+	}
+	o.push(buf, w, h)
+}
+
+// textLayer draws text with the overlay's font, colors and outline and returns
+// it as premultiplied BGRA.
+func (o *Overlay) textLayer(text string, size int) ([]byte, int, int) {
 	screenDC := win.GetDC(0)
 	defer win.ReleaseDC(0, screenDC)
 	memDC := win.CreateCompatibleDC(screenDC)
 	defer win.DeleteDC(memDC)
-
-	var lf win.LOGFONT
-	lf.LfHeight = -int32(o.FontSize)
-	lf.LfWeight = 400
-	if o.Bold {
-		lf.LfWeight = win.FW_BOLD
-	}
-	lf.LfCharSet = 1 // DEFAULT_CHARSET
-	lf.LfQuality = win.ANTIALIASED_QUALITY
-	family := o.FontFamily
-	if family == "" {
-		family = "Segoe UI"
-	}
-	face, _ := syscall.UTF16FromString(family)
-	copy(lf.LfFaceName[:len(lf.LfFaceName)-1], face)
-	font := win.CreateFontIndirect(&lf)
+	font := gdiFont(o.FontFamily, size, o.Bold)
 	defer win.DeleteObject(win.HGDIOBJ(font))
 	oldFont := win.SelectObject(memDC, win.HGDIOBJ(font))
 	defer win.SelectObject(memDC, oldFont)
@@ -180,38 +201,20 @@ func (o *Overlay) Render() {
 	n := int32(len(t16) - 1)
 	var sz win.SIZE
 	win.GetTextExtentPoint32(memDC, &t16[0], n, &sz)
-
-	outline := o.OutlineWidth
-	if outline < 0 {
-		outline = 0
-	}
+	outline := max(o.OutlineWidth, 0)
 	pad := int32(outline + 4)
-	if o.editing {
-		pad += 8
-	}
-	w := sz.CX + 2*pad
-	h := sz.CY + 2*pad
+	w, h := sz.CX+2*pad, sz.CY+2*pad
 
-	var bih win.BITMAPINFOHEADER
-	bih.BiSize = uint32(unsafe.Sizeof(bih))
-	bih.BiWidth = w
-	bih.BiHeight = -h
-	bih.BiPlanes = 1
-	bih.BiBitCount = 32
-	bih.BiCompression = win.BI_RGB
-	var bits unsafe.Pointer
-	dib := win.CreateDIBSection(memDC, &bih, win.DIB_RGB_COLORS, &bits, 0, 0)
-	if dib == 0 || bits == nil {
-		return
+	bits, dib := newDIB(memDC, w, h)
+	if dib == 0 {
+		return make([]byte, 4), 1, 1
 	}
 	defer win.DeleteObject(win.HGDIOBJ(dib))
 	oldBmp := win.SelectObject(memDC, win.HGDIOBJ(dib))
 	defer win.SelectObject(memDC, oldBmp)
-
 	pix := unsafe.Slice((*byte)(bits), int(w*h*4))
 	win.SetBkMode(memDC, win.TRANSPARENT)
 	win.SetTextColor(memDC, win.RGB(255, 255, 255))
-
 	mask := func(offsets [][2]int) []uint8 {
 		for i := range pix {
 			pix[i] = 0
@@ -222,15 +225,7 @@ func (o *Overlay) Render() {
 		win.GdiFlush()
 		m := make([]uint8, w*h)
 		for i := range m {
-			b, g, r := pix[i*4], pix[i*4+1], pix[i*4+2]
-			mx := r
-			if g > mx {
-				mx = g
-			}
-			if b > mx {
-				mx = b
-			}
-			m[i] = mx
+			m[i] = max(pix[i*4], pix[i*4+1], pix[i*4+2])
 		}
 		return m
 	}
@@ -239,10 +234,42 @@ func (o *Overlay) Render() {
 	if outline > 0 {
 		out = mask(OutlineOffsets(outline))
 	}
-	copy(pix, ComposeOverlay(fill, out, int(w), int(h), o.Color, o.OutlineColor, o.editing))
+	return ComposeOverlay(fill, out, int(w), int(h), o.Color, o.OutlineColor, false), int(w), int(h)
+}
 
+// newDIB makes a top-down 32-bit bitmap; the caller deletes it.
+func newDIB(dc win.HDC, w, h int32) (unsafe.Pointer, win.HBITMAP) {
+	var bih win.BITMAPINFOHEADER
+	bih.BiSize = uint32(unsafe.Sizeof(bih))
+	bih.BiWidth = w
+	bih.BiHeight = -h
+	bih.BiPlanes = 1
+	bih.BiBitCount = 32
+	bih.BiCompression = win.BI_RGB
+	var bits unsafe.Pointer
+	dib := win.CreateDIBSection(dc, &bih, win.DIB_RGB_COLORS, &bits, 0, 0)
+	if dib == 0 || bits == nil {
+		return nil, 0
+	}
+	return bits, dib
+}
+
+// push shows a premultiplied BGRA picture as the window's content.
+func (o *Overlay) push(buf []byte, w, h int) {
+	screenDC := win.GetDC(0)
+	defer win.ReleaseDC(0, screenDC)
+	memDC := win.CreateCompatibleDC(screenDC)
+	defer win.DeleteDC(memDC)
+	bits, dib := newDIB(memDC, int32(w), int32(h))
+	if dib == 0 {
+		return
+	}
+	defer win.DeleteObject(win.HGDIOBJ(dib))
+	oldBmp := win.SelectObject(memDC, win.HGDIOBJ(dib))
+	defer win.SelectObject(memDC, oldBmp)
+	copy(unsafe.Slice((*byte)(bits), w*h*4), buf)
 	dst := win.POINT{X: o.X, Y: o.Y}
-	size := win.SIZE{CX: w, CY: h}
+	size := win.SIZE{CX: int32(w), CY: int32(h)}
 	src := win.POINT{}
 	blend := win.BLENDFUNCTION{BlendOp: 0, SourceConstantAlpha: 255, AlphaFormat: win.AC_SRC_ALPHA}
 	procUpdateLayeredWindow.Call(uintptr(o.hwnd), uintptr(screenDC),

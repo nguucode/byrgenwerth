@@ -220,19 +220,6 @@ func (d *Detector) MarkManual(now time.Time) {
 	d.lastCount = now
 }
 
-// Trigger counts a death signalled by another detector (health bar), unless a
-// death was already counted within the cooldown.
-func (d *Detector) Trigger(now time.Time) bool {
-	if !d.lastCount.IsZero() && now.Sub(d.lastCount) < d.Cooldown {
-		return false
-	}
-	d.disarmed = true
-	d.consec, d.below = 0, 0
-	d.lastCount = now
-	d.lastAuto = now
-	return true
-}
-
 // AutoCountedRecently is true if an automatic count happened within the cooldown,
 // meaning a manual hotkey press right now is most likely the same death.
 func (d *Detector) AutoCountedRecently(now time.Time) bool {
@@ -255,6 +242,7 @@ type Hotkeys struct {
 
 	TranslateToggle string `json:"translate_toggle"`
 	TranslateRegion string `json:"translate_region"`
+	Narrate         string `json:"narrate"` // "" = no keyboard key
 }
 
 type Config struct {
@@ -290,7 +278,35 @@ type Config struct {
 
 	TranslateROI      ROI `json:"translate_roi"` // zero until the user picks a region
 	TranslateFontSize int `json:"translate_font_size"`
+
+	// The label shown with the count (overlay and OBS): a word, a picture or nothing,
+	// in one corner around the number.
+	LabelMode   string `json:"label_mode"`   // LabelText, LabelImage or LabelNone
+	LabelText   string `json:"label_text"`   // {game} = game name
+	LabelImage  string `json:"label_image"`  // file name inside the data folder
+	LabelSize   int    `json:"label_size"`   // px: text size, or picture height
+	LabelCorner string `json:"label_corner"` // CornerTL, CornerTR, CornerBL, CornerBR
+
+	// Vietnamese narration of the translation.
+	NarrateVoice  string `json:"narrate_voice"`  // VoiceFemale or VoiceMale
+	NarrateRate   int    `json:"narrate_rate"`   // percent faster (+) or slower (-)
+	NarrateVolume int    `json:"narrate_volume"` // 0..100
+	NarratePad    string `json:"narrate_pad"`    // gamepad buttons, e.g. "LB+Y"; "" = none
 }
+
+const (
+	LabelModeText  = "text"
+	LabelModeImage = "image"
+	LabelModeNone  = "none"
+
+	CornerTL = "tl" // label above the count, left edges lined up
+	CornerTR = "tr"
+	CornerBL = "bl" // label below the count
+	CornerBR = "br"
+)
+
+// LabelCorners is the order the corners are offered in the UI.
+var LabelCorners = []string{CornerTL, CornerTR, CornerBL, CornerBR}
 
 // DefaultKeywords are common death-screen phrases across games.
 var DefaultKeywords = []string{
@@ -310,7 +326,7 @@ func DefaultConfig() Config {
 		IntervalMs:  400,
 		Sound:       true,
 		ObsFormat:   "Deaths: {count}",
-		Hotkeys:     Hotkeys{Add: "F9", Sub: "F10", Capture: "F11", Toggle: "F8", Window: "F7", TranslateToggle: "Ctrl+Alt+T", TranslateRegion: "Ctrl+Alt+R"},
+		Hotkeys:     Hotkeys{Add: "F9", Sub: "F10", Capture: "F11", Toggle: "F8", Window: "F7", TranslateToggle: "Ctrl+Alt+T", TranslateRegion: "Ctrl+Alt+R", Narrate: "Ctrl+Alt+V"},
 
 		ObsEnabled:      true,
 		OverlayFontSize: 40,
@@ -327,6 +343,14 @@ func DefaultConfig() Config {
 
 		TranslateFontSize: 28,
 
+		LabelMode:   LabelModeText,
+		LabelText:   "Deaths",
+		LabelSize:   28,
+		LabelCorner: CornerTL,
+
+		NarrateVoice:  VoiceFemale,
+		NarrateVolume: 100,
+
 		Keywords:     append([]string(nil), DefaultKeywords...),
 		OcrMinHeight: 0.025,
 	}
@@ -340,19 +364,20 @@ type Profile struct {
 	CooldownSec float64  `json:"cooldown_sec"`
 	AutoEnabled bool     `json:"auto_enabled"`
 	OcrEnabled  bool     `json:"ocr_enabled"`
-	Preset      string   `json:"preset,omitempty"`   // game preset name, "" = generic
 	Keywords    []string `json:"keywords,omitempty"` // empty = use global keywords
 	OcrLang     string   `json:"ocr_lang,omitempty"` // "" = Windows user languages
-	HPEnabled   bool     `json:"hp_enabled"`
-	HPZone      ROI      `json:"hp_zone"`
-	HPColor     HPColor  `json:"hp_color"`
-	HPFull      float64  `json:"hp_full"`
 	ROI         ROI      `json:"roi"`
 	Templates   []string `json:"templates"` // file names inside templates/
 }
 
+// Defaults for a new game: template threshold and seconds between two counts.
+const (
+	DefaultThreshold   = 0.70
+	DefaultCooldownSec = 10
+)
+
 func NewProfile(name string) *Profile {
-	return &Profile{Name: name, Threshold: 0.80, CooldownSec: 15, AutoEnabled: true, OcrEnabled: true, ROI: FullROI()}
+	return &Profile{Name: name, Threshold: DefaultThreshold, CooldownSec: DefaultCooldownSec, AutoEnabled: true, OcrEnabled: true, ROI: FullROI()}
 }
 
 type Store struct {
@@ -450,15 +475,43 @@ func writeAtomic(path string, data []byte) error {
 
 func (s *Store) LoadConfig() Config {
 	c := DefaultConfig()
-	hasTextColor := false
+	hasTextColor, hasLabel := false, false
 	if b, err := os.ReadFile(filepath.Join(s.Dir, "config.json")); err == nil {
 		_ = json.Unmarshal(b, &c)
 		var raw map[string]json.RawMessage
 		if json.Unmarshal(b, &raw) == nil {
 			_, hasTextColor = raw["text_color"]
+			_, hasLabel = raw["label_text"]
+			if _, ok := raw["obs_format"]; ok && !hasLabel {
+				c.LabelText = LabelFromFormat(c.ObsFormat) // keep the word a user typed before 0.12
+			}
 		}
 	}
 	d := DefaultConfig()
+	switch c.LabelMode {
+	case LabelModeText, LabelModeImage, LabelModeNone:
+	default:
+		c.LabelMode = d.LabelMode
+	}
+	if c.LabelMode == LabelModeImage && c.LabelImage == "" {
+		c.LabelMode = LabelModeText
+	}
+	if c.LabelSize < 8 || c.LabelSize > 400 {
+		c.LabelSize = d.LabelSize
+	}
+	if CornerIndex(c.LabelCorner) < 0 {
+		c.LabelCorner = d.LabelCorner
+	}
+	if c.NarrateVoice != VoiceFemale && c.NarrateVoice != VoiceMale {
+		c.NarrateVoice = d.NarrateVoice
+	}
+	c.NarrateRate = max(-50, min(c.NarrateRate, 100))
+	if c.NarrateVolume < 0 || c.NarrateVolume > 100 {
+		c.NarrateVolume = d.NarrateVolume
+	}
+	if _, err := ParsePadCombo(c.NarratePad); err != nil {
+		c.NarratePad = ""
+	}
 	if c.OverlayFontSize < 10 || c.OverlayFontSize > 300 {
 		c.OverlayFontSize = d.OverlayFontSize
 	}
@@ -564,10 +617,10 @@ func (s *Store) LoadProfiles() ([]*Profile, error) {
 		}
 		p.ID = e.Name()
 		if p.Threshold <= 0 || p.Threshold > 1 {
-			p.Threshold = 0.80
+			p.Threshold = DefaultThreshold
 		}
 		if p.CooldownSec < 1 {
-			p.CooldownSec = 15
+			p.CooldownSec = DefaultCooldownSec
 		}
 		p.ROI = p.ROI.Normalized()
 		// Drop references to missing template files.
@@ -1306,7 +1359,7 @@ func LegacyDataDirs(appData string) []string {
 }
 
 // appDataFiles are the entries the app writes into a data folder.
-var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", "ocr-misses.log", "ocr-debug.log", "ocr-debug.old.log", apiKeyFile, dataPointerFile}
+var appDataFiles = []string{"profiles", "config.json", "obs_deaths.txt", "history.csv", "ocr-misses.log", "ocr-debug.log", "ocr-debug.old.log", apiKeyFile, dataPointerFile, "label.png", "label.svg", "piper"}
 
 // RemoveAppData deletes the app's own files from dir and then dir itself if
 // it is left empty, so a folder shared with other files keeps them.
