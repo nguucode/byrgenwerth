@@ -50,7 +50,7 @@ Full walkthrough: **[docs/user-guide.md](docs/user-guide.md)**.
 
 ## Build from source
 
-Requires Go 1.24+. Releases are built on Windows and macOS by GitHub Actions when a `v*` tag is pushed (`.github/workflows/release.yml`).
+Requires Go 1.24+. Releases are built on Windows and macOS by GitHub Actions when a `v*` tag is pushed (`.github/workflows/release.yml`). Release Mac builds are signed with a self-signed certificate kept in GitHub secrets (`scripts/make-signing-cert.sh`), so macOS keeps the Screen Recording permission across updates; local builds are signed ad-hoc.
 
 ```sh
 go test ./...

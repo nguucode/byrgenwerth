@@ -44,7 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.s
 
 App được cài vào `~/Applications`, dữ liệu nằm ở `~/Library/Application Support/Byrgenwerth`. Chạy lại lệnh để cập nhật. App không có icon ở Dock: dùng mục **Byrgenwerth** trên thanh menu để mở cửa sổ hoặc thoát.
 
-- Cho phép **Screen Recording** khi macOS hỏi, rồi mở lại app. App chưa được notarize nên macOS có thể hỏi lại sau mỗi lần cập nhật.
+- Cho phép **Screen Recording** khi macOS hỏi, rồi mở lại app. Từ v0.11.2, cập nhật app không mất quyền nữa. Cập nhật từ bản cũ hơn thì macOS hỏi thêm một lần: các bản đó có chữ ký đổi theo mỗi lần cập nhật, và script cài sẽ xóa quyền cũ không còn tác dụng. Nếu Settings đã bật Byrgenwerth mà app vẫn báo chưa có quyền, chạy `tccutil reset ScreenCapture com.nguucode.byrgenwerth` trong Terminal, mở app, cho phép, rồi mở lại app.
 - API key được lưu trong Keychain.
 - Phím F cần giữ **fn** trên đa số bàn phím Mac, trừ khi đã bật *Use F1, F2 as standard function keys*. F11 cũng là phím Show Desktop mặc định, nên dùng nút **Chụp mẫu ngay** sẽ dễ hơn. Muốn đổi phím tắt thì sửa mục `hotkeys` trong `config.json`.
 - Bản Mac chưa được thử với game thật. Đa số game Windows chạy trên Mac qua lớp dịch, nên khả năng đọc chữ có thể khác.
