@@ -24,7 +24,7 @@ The app's interface is in Vietnamese. This guide gives each label in Vietnamese 
 Open **PowerShell** (Start menu → type "PowerShell") and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.ps1 | iex
 ```
 
 - **First time** it asks for an install folder; press Enter for `%LOCALAPPDATA%\Programs\Byrgenwerth`. If the folder you type is not named `Byrgenwerth`, a `Byrgenwerth` folder is created inside it. The app and all its data live there.
@@ -32,7 +32,7 @@ irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | 
 - **Update**: run the same command again. It closes the app, replaces the exe in the same folder and keeps your data. An existing Death Counter install is renamed to Byrgenwerth, with its counts and settings. In OBS, update the path of the text file if you use it.
 - On first launch Windows may ask for **network permission**: the app serves a local page on `127.0.0.1` for OBS. That page stays on your PC. Allow it. Only the Translate tab goes to the internet, and only while it is on.
 
-Manual install: download `Byrgenwerth.exe` from [Releases](https://github.com/nguucode/death-counter/releases/latest) into a folder you can write to (not `C:\Program Files`). SmartScreen may warn because the exe is not code-signed: *More info → Run anyway*. Updates are then manual too.
+Manual install: download `Byrgenwerth.exe` from [Releases](https://github.com/nguucode/byrgenwerth/releases/latest) into a folder you can write to (not `C:\Program Files`). SmartScreen may warn because the exe is not code-signed: *More info → Run anyway*. Updates are then manual too.
 
 Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, Windows blocks screen capture and the overlay is hidden.
 
@@ -41,7 +41,7 @@ Run your game in **Borderless** or **Windowed** mode. In exclusive fullscreen, W
 macOS 14 or newer, Apple Silicon or Intel. It has the same two tools as Windows. Run this in Terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nguucode/death-counter/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.sh | sh
 ```
 
 The app goes to `~/Applications`, with its data in `~/Library/Application Support/Byrgenwerth`. Run the command again to update. It has no Dock icon: use **Byrgenwerth** in the menu bar to open the window or quit.

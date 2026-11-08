@@ -1,5 +1,5 @@
 # Install or update Byrgenwerth. Run in PowerShell:
-#   irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.ps1 | iex
 # First run asks for a folder; later runs update that folder in place.
 # The app keeps its data in "ByrgenwerthData" inside the same folder.
 # An existing Death Counter install is renamed in place; its data comes along.
@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue' # the progress bar makes downloads very slow on 5.1
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$repo = 'nguucode/death-counter'
+$repo = 'nguucode/byrgenwerth'
 # Before touching anything, so a release without the exe leaves an install as it was.
 $release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest"
 $asset = $release.assets | Where-Object name -eq 'Byrgenwerth.exe'

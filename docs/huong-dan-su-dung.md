@@ -22,7 +22,7 @@
 Mở **PowerShell** (Start menu → gõ "PowerShell") rồi chạy:
 
 ```powershell
-irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.ps1 | iex
 ```
 
 - **Lần đầu** script hỏi thư mục cài; bấm Enter để dùng `%LOCALAPPDATA%\Programs\Byrgenwerth`. Thư mục bạn gõ không tên là `Byrgenwerth` thì script tạo thư mục `Byrgenwerth` bên trong. App và toàn bộ dữ liệu nằm trong thư mục này.
@@ -30,7 +30,7 @@ irm https://raw.githubusercontent.com/nguucode/death-counter/main/install.ps1 | 
 - **Cập nhật**: chạy lại đúng lệnh đó. Script đóng app, thay file exe trong cùng thư mục, giữ nguyên dữ liệu. Bản Death Counter đang cài sẽ được đổi tên thành Byrgenwerth, giữ nguyên số đếm và cài đặt. Nếu dùng file text trong OBS thì cập nhật lại đường dẫn.
 - Lần đầu mở app, Windows có thể **hỏi quyền mạng**: app mở một trang web nội bộ ở `127.0.0.1` để OBS đọc. Trang này chỉ chạy trong máy. Chọn cho phép. Chỉ tab Translate mới ra internet, và chỉ khi đang bật.
 
-Cài tay: tải `Byrgenwerth.exe` ở trang [Releases](https://github.com/nguucode/death-counter/releases/latest) vào thư mục bạn có quyền ghi (không phải `C:\Program Files`). SmartScreen có thể cảnh báo vì exe chưa ký số: *More info → Run anyway*. Khi đó cập nhật cũng phải làm tay.
+Cài tay: tải `Byrgenwerth.exe` ở trang [Releases](https://github.com/nguucode/byrgenwerth/releases/latest) vào thư mục bạn có quyền ghi (không phải `C:\Program Files`). SmartScreen có thể cảnh báo vì exe chưa ký số: *More info → Run anyway*. Khi đó cập nhật cũng phải làm tay.
 
 Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclusive Fullscreen, Windows không cho app chụp màn hình game và overlay bị che.
 
@@ -39,7 +39,7 @@ Game phải chạy ở chế độ **Borderless** hoặc **Windowed**. Ở Exclu
 macOS 14 trở lên, Apple Silicon hoặc Intel. Có đủ hai công cụ như bản Windows. Chạy lệnh này trong Terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nguucode/death-counter/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/nguucode/byrgenwerth/main/install.sh | sh
 ```
 
 App được cài vào `~/Applications`, dữ liệu nằm ở `~/Library/Application Support/Byrgenwerth`. Chạy lại lệnh để cập nhật. App không có icon ở Dock: dùng mục **Byrgenwerth** trên thanh menu để mở cửa sổ hoặc thoát.
